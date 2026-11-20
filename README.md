@@ -72,6 +72,36 @@ python scripts/verify_offline.py --json
 
 脚本只使用 Python 标准库，不连接数据库、不访问网络、不执行 SQL。只要 `ok` 为 `true`、`issues` 为空，就说明文件齐全、没有夹带连接信息或开发语料。
 
+## 本地开发：让技能跟随仓库更新
+
+如果你在本机维护这个仓库，又想让自己正在用的 Agent 一直加载最新版本，不要复制副本——副本会漂移，改了仓库本地还是旧的。用目录联接把本地技能目录直接指向仓库子目录：
+
+```powershell
+# 1. 现有副本改名留底（不删除，随时可回滚）
+Rename-Item "$env:USERPROFILE\.minimax\skills\pg-function-craft" "pg-function-craft.bak"
+
+# 2. 建联接到仓库的技能子目录（指向 skills\pg-function-craft，不是仓库根）
+cmd /c mklink /J "$env:USERPROFILE\.minimax\skills\pg-function-craft" `
+  "<仓库绝对路径>\skills\pg-function-craft"
+```
+
+验证联接生效：
+
+```powershell
+Get-Item "$env:USERPROFILE\.minimax\skills\pg-function-craft" | Select-Object LinkType,Target
+```
+
+`LinkType` 应为 `Junction`，`Target` 指向仓库子目录。此后 `git pull` 即完成技能更新，不需要重新安装。
+
+约束：
+
+- **仓库目录不能移动或改名**，否则联接断开，需重建。
+- **分支会直接影响技能**。在草稿分支上改规则时，Agent 读到的就是草稿版；改完记得切回 `main`。
+- 备份目录要放在 `skills/` **之外**（例如 `~/.minimax/skills-backup/`），否则可能被 Agent 或 CLI 当成第二个同名技能。目录名以 `.bak` 结尾时 `npx skills list` 不会收录，但仍建议移出。
+- 本方案在不同 Agent 的技能目录下通用，把上面的路径换成目标 Agent 的目录即可。
+
+不想用联接、希望由 CLI 统一管理时，改用 `npx skills add gyb-cpu/yabo-data-skills --skill pg-function-craft -g` 安装，之后 `npx skills update -g` 更新。代价是需要本机有 GitHub 凭据，且仍会保留一份副本。
+
 ## 使用
 
 安装后直接用自然语言描述任务，Agent 会按 `SKILL.md` 的触发条件进入对应模式：
