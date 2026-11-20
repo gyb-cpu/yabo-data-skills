@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">pg-function-craft</title>
+  <desc id="desc">PostgreSQL function engineering skill for generation, rewriting and review.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1280" height="420" rx="28" fill="url(#bg)"/>
+  <circle cx="1120" cy="72" r="150" fill="#38bdf8" opacity=".08"/>
+  <circle cx="1160" cy="360" r="220" fill="#a78bfa" opacity=".08"/>
+  <path d="M0 350 C210 290 310 390 500 330 S820 260 1280 320" fill="none" stroke="#38bdf8" stroke-opacity=".12" stroke-width="2"/>
+  <path d="M0 375 C240 315 370 420 590 355 S920 300 1280 350" fill="none" stroke="#a78bfa" stroke-opacity=".12" stroke-width="2"/>
+
+  <g transform="translate(86 82)">
+    <rect x="0" y="0" width="112" height="112" rx="24" fill="#0f1d35" stroke="#38bdf8" stroke-opacity=".65" stroke-width="2"/>
+    <path d="M28 35h56M28 57h56M28 79h36" stroke="url(#accent)" stroke-width="7" stroke-linecap="round" filter="url(#glow)"/>
+    <circle cx="79" cy="79" r="7" fill="#a78bfa"/>
+  </g>
+
+  <text x="236" y="132" fill="#f8fafc" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-.8">pg-function-craft</text>
+  <text x="240" y="181" fill="#bae6fd" font-family="Segoe UI, Arial, sans-serif" font-size="22">PostgreSQL function engineering</text>
+  <rect x="240" y="220" width="650" height="2" fill="url(#accent)" opacity=".8"/>
+  <text x="240" y="266" fill="#e2e8f0" font-family="Segoe UI, Arial, sans-serif" font-size="21">Generate  ·  Rewrite  ·  Review</text>
+  <text x="240" y="305" fill="#94a3b8" font-family="Segoe UI, Arial, sans-serif" font-size="18">Fixed SQL style · static performance analysis · safe boundaries</text>
+
+  <g transform="translate(1000 112)" opacity=".9">
+    <path d="M0 0h128v170H0z" fill="#0f1d35" stroke="#64748b" stroke-opacity=".6" stroke-width="2"/>
+    <path d="M22 38h84M22 68h62M22 98h74M22 128h48" stroke="#38bdf8" stroke-width="5" stroke-linecap="round"/>
+    <path d="M24 166h80" stroke="#a78bfa" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

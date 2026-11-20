@@ -1,0 +1,5 @@
+# 技能包自检要求 UTF-8 无 BOM + LF；Windows 下 autocrlf 会把 LF 转成 CRLF，这里强制锁定
+* text=auto eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.svg text eol=lf

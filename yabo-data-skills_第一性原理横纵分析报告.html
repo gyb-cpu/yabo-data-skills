@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+@page {
+    size: A4;
+    margin: 25mm 20mm 20mm 20mm;
+
+    @top-center {
+        content: "yabo-data-skills 项目第一性原理横纵分析报告  |  横纵分析法深度研究报告";
+        font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Droid Sans Fallback", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #95a5a6;
+        border-bottom: 0.5pt solid #ecf0f1;
+        padding-bottom: 3mm;
+    }
+
+    @bottom-center {
+        content: "第 " counter(page) " 页";
+        font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Droid Sans Fallback", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #95a5a6;
+        border-top: 0.8pt solid #1a5276;
+        padding-top: 2mm;
+    }
+}
+
+@page :first {
+    @top-center { content: none; }
+    @bottom-center { content: none; }
+}
+
+body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Droid Sans Fallback", Helvetica, Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.75;
+    color: #2c3e50;
+    text-align: justify;
+}
+
+/* 封面 */
+.cover {
+    page-break-after: always;
+    text-align: center;
+    padding-top: 65mm;
+}
+.cover h1 {
+    font-size: 28pt;
+    color: #1a5276;
+    margin-bottom: 8mm;
+    font-weight: bold;
+    letter-spacing: 2pt;
+}
+.cover .subtitle {
+    font-size: 14pt;
+    color: #95a5a6;
+    margin-bottom: 6mm;
+}
+.cover .meta {
+    font-size: 11pt;
+    color: #95a5a6;
+    margin-bottom: 4mm;
+}
+.cover .divider {
+    width: 60%;
+    margin: 8mm auto;
+    border: none;
+    border-top: 1.5pt solid #1a5276;
+}
+
+@media screen {
+    body { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .cover { padding-top: 12vh; padding-bottom: 12vh; }
+    table { display: block; overflow-x: auto; }
+}
+
+/* 一级标题 */
+h1 {
+    font-size: 20pt;
+    color: #1a5276;
+    margin-top: 16mm;
+    margin-bottom: 6mm;
+    padding-bottom: 3mm;
+    border-bottom: 2pt solid #1a5276;
+    page-break-before: always;
+    font-weight: bold;
+}
+
+/* 二级标题 */
+h2 {
+    font-size: 14pt;
+    color: #1e8449;
+    margin-top: 10mm;
+    margin-bottom: 5mm;
+    font-weight: bold;
+}
+
+/* 三级标题 */
+h3 {
+    font-size: 12pt;
+    color: #2e86c1;
+    margin-top: 6mm;
+    margin-bottom: 3mm;
+    font-weight: bold;
+}
+
+h4 {
+    font-size: 11pt;
+    color: #5b2c6f;
+    margin-top: 5mm;
+    margin-bottom: 2mm;
+    font-weight: bold;
+}
+
+/* 段落 */
+p {
+    margin-top: 1.5mm;
+    margin-bottom: 1.5mm;
+    orphans: 3;
+    widows: 3;
+}
+
+/* 引用块 */
+blockquote {
+    margin: 4mm 0;
+    padding: 4mm 4mm 4mm 10mm;
+    background: #f8f9fa;
+    border-left: 3pt solid #1a5276;
+    color: #5d6d7e;
+    font-size: 10pt;
+}
+blockquote p {
+    margin: 1mm 0;
+}
+
+/* 粗体 */
+strong, b {
+    font-weight: bold;
+    color: #1a252f;
+}
+
+/* 行内代码 */
+code {
+    font-family: "Courier New", Courier, monospace;
+    background: #fdf2e9;
+    color: #c0392b;
+    padding: 0.5mm 1.5mm;
+    border-radius: 2pt;
+    font-size: 9.5pt;
+}
+
+/* 表格 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4mm 0;
+    font-size: 9.5pt;
+}
+thead th {
+    background: #1a5276;
+    color: white;
+    padding: 3mm;
+    text-align: left;
+    font-weight: bold;
+}
+tbody td {
+    padding: 2.5mm 3mm;
+    border-bottom: 0.5pt solid #bdc3c7;
+}
+tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+/* 分隔线 */
+hr {
+    border: none;
+    border-top: 0.5pt solid #bdc3c7;
+    margin: 4mm 0;
+}
+
+/* 列表 */
+ul, ol {
+    margin: 2mm 0;
+    padding-left: 8mm;
+}
+li {
+    margin-bottom: 1mm;
+}
+
+/* 链接 */
+a {
+    color: #2e86c1;
+    text-decoration: none;
+}
+</style>
+</head>
+<body>
+
+    <div class="cover">
+        <h1 style="page-break-before: avoid; border: none;">yabo-data-skills 项目第一性原理横纵分析报告</h1>
+        <div class="subtitle">横纵分析法深度研究报告</div>
+        <div class='meta'>研究时间：2026-11-13 | 所属领域：Agent Skills / PostgreSQL 工程规范 | 研究对象类型：开源技能仓库</div>
+        <hr class="divider">
+        
+    </div>
+    
+
+<blockquote>
+<p>研究时间：2026-11-13 | 所属领域：Agent Skills / PostgreSQL 工程规范 | 研究对象类型：开源技能仓库</p>
+</blockquote>
+<h2>摘要</h2>
+<p><code>yabo-data-skills</code> 当前不是一个传统意义上的软件库，而是一套把 PostgreSQL 函数工程经验编码成 Agent 行为约束的技能集合。仓库只有一个公开技能 <code>pg-function-craft</code>，它试图解决三类问题：生成函数时减少猜测，改写函数时保持外部行为，审查函数时把安全、正确性、性能风险和风格问题分开。</p>
+<p>项目最有价值的部分不是 <code>verify_offline.py</code>，也不是数量庞大的参考文档，而是三项组合机制：<strong>三模式输出契约、证据等级标签、按需路由读取</strong>。它们把“模型应该谨慎一点”转成了较具体的操作流程。</p>
+<p>但从第一性原理看，项目目前只完成了“知识固化”，还没有完成“质量闭环”。规则很多，实际产出却没有自动评测；离线自检检查的是技能包装，不是技能生成的 SQL；安装说明含有未替换的账号占位符；仓库版本与当前用户级安装副本存在明显分歧。项目的主要瓶颈不是缺规则，而是缺少<strong>唯一事实源、可执行验证、版本和部署一致性</strong>。</p>
+<p>我的核心判断是：</p>
+<blockquote>
+<p>这是一份内容密度已经接近产品级、但交付链仍停留在规范草稿阶段的 Agent Skill。下一阶段应优先减少规则、增加验证，而不是继续扩充规则。</p>
+</blockquote>
+<h2>一、项目是什么：从第一性原理拆解</h2>
+<h3>1. 它真正交付的不是 SQL，而是行为概率</h3>
+<p>一个普通 SQL 库交付的是函数、类或命令；本项目交付的是一组文本规则。它们被 Agent 读入上下文后，改变模型生成 SQL 的概率分布。</p>
+<p>因此项目的基本价值函数可以写成：</p>
+<blockquote>
+<p>实际价值 = 规则遵守率 × 任务频次 × 错误避免收益 − 上下文成本 − 错误自信成本</p>
+</blockquote>
+<p>这里有四个变量：</p>
+<ul>
+<li><strong>规则遵守率</strong>：模型是否真的按规则生成，而不是只在回答末尾自称“自检通过”；</li>
+<li><strong>任务频次</strong>：同一团队是否反复处理 PostgreSQL 函数，足以摊薄学习和接入成本；</li>
+<li><strong>错误避免收益</strong>：是否能减少安全漏洞、接口破坏、日期边界错误和无证据性能结论；</li>
+<li><strong>上下文成本与错误自信成本</strong>：规则占用多少上下文，以及规则是否让模型产生“已合规”的假象。</li>
+</ul>
+<p>当前项目对第三项投入很深，对前两项有明确设计，对最后两项处理不足。</p>
+<h3>2. 它解决的原始问题</h3>
+<p>如果把所有文档、模式和术语都去掉，剩下的问题只有一句话：</p>
+<blockquote>
+<p>如何让一个没有数据库现场、没有完整业务背景、也没有稳定个人经验的 Agent，生成或修改一段不能随意改变行为的 PostgreSQL 函数？</p>
+</blockquote>
+<p>这个问题包含三个根矛盾：</p>
+<ol>
+<li><strong>信息不完整与输出必须具体的矛盾</strong>：用户常常不给 DDL、索引、版本或错误契约，但模型仍倾向于直接写 SQL；</li>
+<li><strong>风格统一与行为保持的矛盾</strong>：改写既要符合目标风格，又不能借格式化之名改变接口、事务、异常和结果语义；</li>
+<li><strong>性能建议与缺少实测的矛盾</strong>：模型容易把静态直觉写成“更快”，而真实性能依赖数据量、分布、统计信息、并发和执行计划。</li>
+</ol>
+<p><code>SKILL.md</code> 用 <code>Assumptions</code>、<code>generate/rewrite/review</code> 三模式和 <code>static-risk / plan-required / workload-required / not verified</code> 等标签，分别回应了这三个矛盾。这是项目最清楚的价值主线。</p>
+<h2>二、纵向分析：项目如何从“规范”走向“技能”</h2>
+<h3>阶段一：把个人经验抽象成固定规则</h3>
+<p>从文件结构看，项目以规则文档为主体：<code>references/00-10</code> 承载边界、基线、反模式、固定风格、重写协议、排版、性能、审查、工程结构和 PL/pgSQL 语法。规则中包含命名、中文七字段头、前置逗号、临时表物化理由、日期谓词、动态 SQL、<code>SECURITY DEFINER</code> 和异常处理等具体约束。</p>
+<p>这一步的正确方向在于：把“某个人习惯这样写”拆成“可观察、可引用、可争论”的规则。尤其是安全规则和证据标签，不再依赖模型理解维护者的个人偏好。</p>
+<p>但它也留下了路径依赖：固定风格包含 <code>f_</code>、<code>p_</code>、<code>v_</code>、中文七字段头、前置逗号和 <code>RETURN -1/0</code> 等团队房规。这些内容适合内部团队，却不天然等于 PostgreSQL 社区通用规范。项目把它们包装成“已脱敏的通用风格”，扩大了适用范围，也扩大了误用风险。</p>
+<h3>阶段二：从规则文本变成 Agent 状态机</h3>
+<p><code>SKILL.md</code> 将使用方式分成：</p>
+<ul>
+<li><code>generate</code>：先列假设与缺失输入，再给 SQL、静态验证和自检；</li>
+<li><code>rewrite</code>：给出 diff、行为等价说明、改动表和未验证项；</li>
+<li><code>review</code>：给出带级别、规则 ID、位置、证据、后果和建议的问题表。</li>
+</ul>
+<p>这不是简单的目录导航，而是一种轻量状态机。它规定 Agent 先做什么、哪些信息不能跳过、哪类结论必须带证据标签。</p>
+<p>其中最有效的设计是性能证据纪律：没有数据库、执行计划和负载数据时，只能写 <code>static-risk</code>、<code>inferred</code>、<code>plan-required</code>、<code>workload-required</code> 或 <code>not verified</code>，不得写“更快”“已验证”“实测通过”。这一点直接针对语言模型最容易犯的过度断言错误。</p>
+<h3>阶段三：加入离线自检，但自检对象发生了错位</h3>
+<p><code>verify_offline.py</code> 可以确认以下事实：必备文档是否存在、是否出现连接串和驱动名、是否有明显的语料或元数据文件、文本是否为 UTF-8/LF、是否存在额外 Python 文件。当前运行结果为 <code>ok: true</code>、<code>issues: []</code>、<code>warnings: []</code>。</p>
+<p>但它没有验证最关键的对象：<strong>Agent 生成的 SQL 是否真的符合规则</strong>。它不解析 SQL，不检查输出契约，不检查规则引用是否悬空，不检查 Markdown 交叉引用，也不检查仓库是否与安装后的副本一致。</p>
+<p>这形成一个契约错位：项目真正出售的是“改变 SQL 产出质量”，而现有自动化主要证明“技能包没有明显脏文件”。后者必要，但不是核心质量指标。</p>
+<h3>阶段四：仓库版本与运行时版本分叉</h3>
+<p>当前仓库中的 <code>SKILL.md</code> 只保留 <code>generate/rewrite/review</code> 三种模式，并明确不携带语料和个人风格资料。当前用户级目录 <code>C:/Users/LAMBda999/.kimi-code/skills/pg-function-craft/SKILL.md</code> 却仍包含 <code>distill</code> 模式，并引用 <code>风格档案.md</code>、<code>references/03-语料画像.md</code> 和 <code>references/04-蒸馏方法.md</code>。</p>
+<p>这不是普通的文档差异，而是运行时行为差异：同一个用户提出同一个请求，Agent 可能根据安装副本进入“蒸馏”模式；仓库维护者却以为该模式已被删除。于是“发布版本”“实际版本”“验证版本”三者不再相同。</p>
+<p>第一性原理上，任何规则系统都必须先回答一个问题：<strong>现在究竟哪一份规则在生效？</strong> 当前项目对此没有版本号、清理安装策略或部署态检查，因而无法稳定回答。</p>
+<h2>三、横向分析：它与替代方案的关系</h2>
+<h3>1. 与团队 Wiki / 编码规范相比</h3>
+<p>团队 Wiki 擅长解释背景、记录历史和容纳例外，但通常不能在每次 Agent 调用时自动进入任务流程。<code>pg-function-craft</code> 的优势在于把规则放在模型工作流中，并规定输出结构；缺点是规则进入上下文后容易造成负担，且模型是否遵守难以直接观测。</p>
+<p>它不是 Wiki 的替代品，更像是把 Wiki 中最需要被重复执行的部分编译成 Agent 指令。</p>
+<h3>2. 与 SQL formatter 相比</h3>
+<p>formatter 能稳定处理缩进、大小写和换行，却不能判断临时表是否有物化理由，不能识别 <code>SECURITY DEFINER</code> 的 <code>search_path</code> 风险，也不能区分“静态风险”和“已用真实负载验证”。</p>
+<p>本项目的差异化是语义和证据纪律。但这也说明它应当主动把纯格式问题交给机器工具，而不是让语言模型手工完成所有排版和结构等价证明。</p>
+<h3>3. 与 SQL linter / 数据库审查工具相比</h3>
+<p>SQL linter 可以对有限规则给出稳定的红绿结果；数据库审查工具还可以结合实际版本、系统目录、执行计划和统计信息。<code>pg-function-craft</code> 在没有数据库连接的环境中，覆盖的是更早的“输入不完整时如何诚实工作”这一层。</p>
+<p>它的合理生态位不是“替代 linter”，而是位于：</p>
+<blockquote>
+<p>用户意图 → Agent 生成/改写/解释 → SQL linter → 数据库计划与负载验证</p>
+</blockquote>
+<p>当前仓库只实现了中间的 Agent 层，并且还缺少与下游 linter、数据库验证的接口协议。</p>
+<h3>4. 用户真正会选择它的理由</h3>
+<p>用户不会因为参考文档有 200KB 而选择它。用户会因为以下结果选择它：</p>
+<ul>
+<li>不再凭空猜表结构和索引；</li>
+<li>改写时能看见哪些是版式变化，哪些是行为变化；</li>
+<li>遇到性能问题时不再被“看起来更快”的结论误导；</li>
+<li>团队成员得到相似的函数结构和审查语言；</li>
+<li>安全默认值不会因为“只是写个小函数”而被跳过。</li>
+</ul>
+<p>反过来，如果用户第一次执行 README 中含 <code>&lt;GitHub账号&gt;</code> 的安装命令就失败，或安装后仍加载旧版 <code>distill</code> 文件，那么所有规则价值都会在入口处损失。</p>
+<h2>四、横纵交汇：真正决定项目成败的因果链</h2>
+<h3>1. 历史决策如何塑造当前优势</h3>
+<p>项目早期选择“规则条文而非生产样例”，带来了脱敏、可分发和反向泄漏控制的优势；同时失去了 few-shot 示例对风格形态的校准能力。</p>
+<p>项目选择“不连数据库”，带来了安全边界清晰、可离线运行和不触碰用户凭据的优势；同时把性能验证责任全部推回用户侧。证据标签因此成为必要机制，但标签本身只能管理诚实性，不能提供计划或负载答案。</p>
+<p>项目选择“大量 reference 分文档维护”，带来了知识覆盖和可定位性；同时形成规则重复、交叉引用漂移和上下文成本。当前 <code>SKILL.md</code> 写着“按需读取”，但一次生成任务按路由可能需要读取几十 KB 甚至上百 KB 的规则。</p>
+<h3>2. 当前优势与劣势的历史根源</h3>
+<p><strong>优势根源</strong>：</p>
+<ul>
+<li>证据标签来自对“静态判断冒充实测”的直接防御；</li>
+<li>三模式拆分来自对生成、改写和审查混在一起会造成责任不清的认识；</li>
+<li>反注入边界来自把用户 SQL 当作不可信数据的安全建模；</li>
+<li>版本门槛和 <code>SECURITY DEFINER</code> 规则来自工程实践，而不是单纯排版偏好。</li>
+</ul>
+<p><strong>劣势根源</strong>：</p>
+<ul>
+<li>规则持续增加，却没有同步建立行为评测集；</li>
+<li>为了去除内部来源痕迹，连完整合成范例也没有留下，导致规则难以校准；</li>
+<li>通过人工清单验收，导致“验收标准存在”被误认为“验收可执行”；</li>
+<li>安装以复制目录为主，没有版本和卸载/覆盖语义，最终造成运行时副本分叉。</li>
+</ul>
+<h3>3. 三个未来剧本</h3>
+<h4>最可能剧本：成为团队内部高价值规范层</h4>
+<p>如果项目修复安装一致性、补少量可执行 SQL 检查，并保留“不连库、不夸大性能”的边界，它最可能成为一个 PostgreSQL 团队的内部 Agent 规范层。它不一定成为通用生态标准，但能降低团队间风格漂移和安全审查遗漏。</p>
+<h4>最危险剧本：规则越来越多，实际遵守率越来越低</h4>
+<p>如果继续增加参考文档而不做行为评测，Agent 会遇到两个静默失败：一是上下文过长导致部分规则未读，二是输出末尾用“自检通过”掩盖实际违规。用户看到的是一套很严谨的系统，拿到的却是无法证明合规的 SQL。这种伪置信比明显报错更危险。</p>
+<h4>最乐观剧本：形成可组合的 PostgreSQL Agent 质量链</h4>
+<p>将技能拆成“通用安全与证据核心”和“可选团队房规”，再对接 SQL formatter/linter、版本矩阵和用户侧 EXPLAIN 流程，项目可以成为一个组合式质量链：Agent 负责理解意图和解释风险，静态工具负责可判定规则，数据库负责真实计划与负载证据。</p>
+<h2>五、第一性原理整改路线</h2>
+<h3>P0：先恢复“写的东西”和“跑的东西”一致</h3>
+<ol>
+<li><strong>统一运行时副本</strong>：用仓库版本覆盖用户级安装目录，并显式删除已经移除的 <code>distill</code>、语料画像和旧风格档案文件；安装后在部署目录运行自检，而不是只在仓库目录运行。</li>
+<li><strong>补版本标识</strong>：给 <code>SKILL.md</code> 增加版本字段，增加变更记录，验证输出中回显版本。规则文本每次修改都会改变 Agent 行为，必须可追溯。</li>
+<li><strong>修复安装入口</strong>：将 <code>&lt;GitHub账号&gt;</code> 改为真实发布路径，或明确标记当前是未发布草稿；补充 <code>LICENSE</code>/<code>NOTICE</code>，说明上游规则来源和再分发边界。</li>
+<li><strong>修复悬空引用</strong>：至少处理 <code>SKILL.md</code>、<code>06-SQL排版规范.md</code>、<code>07-性能优化规则.md</code> 中指向 README 第 7/8 节的引用。</li>
+</ol>
+<h3>P1：把“验证技能”变成“验证产出”</h3>
+<ol>
+<li>增加少量纯标准库的 SQL 输出检查，优先覆盖机器可判定规则：前置逗号、关键字大小写、七字段头、<code>SECURITY DEFINER</code> 的 <code>search_path</code>、<code>WHEN OTHERS THEN NULL</code>、动态 SQL 绑定。</li>
+<li>将 <code>tests/README.md</code> 中的人工勾选项改成最小 fixture：<code>generate</code>、<code>rewrite</code>、<code>review</code> 各一到两个案例，并对关键字段做断言。</li>
+<li>将交叉引用、规则 ID 定义/引用、必备资源和 Markdown 链接纳入自检。</li>
+<li>不要让“规则自检”只由模型自述完成；至少把高风险、低歧义的规则交给机器。</li>
+</ol>
+<h3>P2：压缩上下文，重新划分产品边界</h3>
+<ol>
+<li>新增一张不超过约 150 行的速查卡，只保留安全、证据和最常见的 20～30 条规则；详细文档按异常情况加载。</li>
+<li>将技能拆成两层：</li>
+<li><code>core</code>：安全默认值、行为保持、证据标签、版本和输入缺口；</li>
+<li><code>house-style</code>：<code>f_/p_/v_</code>、七字段头、前置逗号、<code>RETURN -1/0</code> 等团队房规。</li>
+<li>将 PostgreSQL 9.4 / Greenplum 6.6 从隐式默认改成显式目标版本；版本未提供时可以给保守假设，但必须提醒用户确认。</li>
+<li>让格式化工具承担格式化，让 Agent 负责解释、分类和请求批准；没有 SQL 解析器时，不要把结构等价证明写成模型自证。</li>
+</ol>
+<h2>六、最终评价</h2>
+<p>项目已经超过“把几条提示词放进 SKILL.md”的阶段。它有清晰的问题意识，尤其在安全边界、性能证据和行为保持方面，形成了可迁移的工程方法。</p>
+<p>但它还没有成为稳定的工程产品，因为质量闭环缺最后三段：</p>
+<ol>
+<li><strong>规则版本可追溯</strong>；</li>
+<li><strong>部署版本可复现</strong>；</li>
+<li><strong>输出质量可机器验证</strong>。</li>
+</ol>
+<p>在这三件事完成前，继续增加规则的边际收益很低。项目下一次跃迁不来自“再写一篇性能规范”，而来自让一次真实的 <code>generate/rewrite/review</code> 任务能够被回放、被检查、被比较，并且明确知道当时到底加载了哪一版规则。</p>
+<h2>七、信息来源与证据边界</h2>
+<h3>仓库内一手材料</h3>
+<ul>
+<li><code>README.md</code>：项目定位、安装、使用方式、边界说明。</li>
+<li><code>skills/pg-function-craft/SKILL.md</code>：触发描述、三种模式、输出契约、证据标签和参考文档路由。</li>
+<li><code>skills/pg-function-craft/README.md</code>：技能安装、使用、性能边界和文件说明。</li>
+<li><code>skills/pg-function-craft/scripts/verify_offline.py</code>：离线自检实现；本次在仓库目录实际运行，结果为 <code>ok: true</code>、<code>issues: []</code>、<code>warnings: []</code>。</li>
+<li><code>skills/pg-function-craft/tests/README.md</code>：人工验收场景和预期行为。</li>
+<li><code>skills/pg-function-craft/references/00-风格与边界.md</code> 至 <code>10-PLpgSQL语法与函数形态.md</code>：规则正文与工程约束。</li>
+<li><code>C:/Users/LAMBda999/.kimi-code/skills/pg-function-craft/SKILL.md</code>：当前用户级安装副本，用于核对仓库版本与运行时版本差异。</li>
+</ul>
+<h3>信息缺口</h3>
+<p>本次联网搜索未能完成，搜索服务返回权限错误。因此没有把外部 CLI 文档、上游仓库当前状态或市场采用情况写成已核实事实。关于 SQL formatter、linter 和团队 Wiki 的比较，是基于工具类别能力边界的分析，不是对某个具体产品的当前版本评测。</p>
+<h2>八、方法论说明</h2>
+<p>本报告结合第一性原理与横纵分析法：先沿时间和结构还原项目如何从规则文档演变为 Agent 行为契约，再将其与团队规范、格式化工具和数据库验证工具横向比较，最后交叉分析历史决策如何造成当前优势、劣势和未来路径。</p>
+</body>
+</html>

@@ -1,0 +1,130 @@
+# yabo-data-skills
+
+可复用的 Agent Skills 集合，通过通用的 skills CLI 分发，不绑定任何特定的 Agent 或 IDE。
+
+当前收录：
+
+| Skill | 版本 | 作用 |
+|---|---|---|
+| `pg-function-craft` | 0.4.0 | PostgreSQL / Greenplum 函数、存储过程与触发器函数的生成、改写与静态审查 |
+
+## 安装
+
+前提：
+
+- 已安装 Node.js，可用 `npx`；
+- 使用的 Agent 兼容 skills CLI（能读取 `SKILL.md` 形式的技能目录）。
+
+> 本仓库为私有仓库。skills CLI 匿名拉取时会返回 404，需要先在本地配置好 GitHub 凭据
+> （`gh auth login`，或带 token 的 git 凭据管理器），再执行下面的安装命令。
+
+安装位置不是本仓库决定的。skills CLI 或承载它的 Agent 会选择落盘目录——可能是用户级技能目录，也可能是项目内目录——请以 CLI 的实际输出和该 Agent 的文档为准。本仓库不假定也不要求任何固定路径。
+
+### 安装指定 Skill
+
+在任意目录执行：
+
+```bash
+npx skills add gyb-cpu/yabo-data-skills --skill pg-function-craft
+```
+
+### 自动发现安装
+
+如果所用 CLI 支持仓库自动发现（扫描仓库内的 `skills/` 目录并列出可安装项），可以省略 `--skill`：
+
+```bash
+npx skills add gyb-cpu/yabo-data-skills
+```
+
+随后按提示选择 `pg-function-craft`。不同 CLI 版本的参数可能略有差异，必要时先查看 `npx skills add --help`。
+
+### 不使用 CLI 时
+
+把 `skills/pg-function-craft/` 整个目录复制到目标 Agent 的技能目录，具体位置由该 Agent 的文档决定。目录中必须保留：
+
+```text
+SKILL.md
+references/
+scripts/
+tests/
+assets/
+```
+
+## 安装后验证
+
+在 `pg-function-craft` 技能根目录执行：
+
+```bash
+python scripts/verify_offline.py --json
+```
+
+预期结果：
+
+```json
+{
+  "ok": true,
+  "files_scanned": 20,
+  "issues": [],
+  "warnings": [],
+  "database_connected": false
+}
+```
+
+脚本只使用 Python 标准库，不连接数据库、不访问网络、不执行 SQL。只要 `ok` 为 `true`、`issues` 为空，就说明文件齐全、没有夹带连接信息或开发语料。
+
+## 使用
+
+安装后直接用自然语言描述任务，Agent 会按 `SKILL.md` 的触发条件进入对应模式：
+
+| 需求 | 模式 | 示例 |
+|---|---|---|
+| 新写函数、过程或触发器函数 | `generate` | “写一个按日期范围落表的 PG 函数” |
+| 让已有函数符合固定风格 | `rewrite` | “按 pg-function-craft 重写这个函数，保持行为不变” |
+| 检查安全、正确性、性能和风格 | `review` | “审查这个函数的性能和 SQL 写法” |
+
+建议同时提供函数定义、PostgreSQL / Greenplum 版本、目标表 DDL 与索引、数据量与日期范围。缺失的信息会被列为待确认项，不会靠猜测补齐。
+
+## 仓库结构
+
+```text
+yabo-data-skills/
+  README.md                          本文件：通用安装与使用说明
+  .gitignore
+  tests/                             仓库级回归测试（锁定规则文本与脚本契约）
+    README.md                        各测试文件的职责说明
+    test_*.py                        48 个用例，Python 3.12 下全绿
+  skills/
+    pg-function-craft/
+      SKILL.md                       技能主规则与触发入口（frontmatter 含 semver）
+      README.md                      技能自身说明
+      CHANGELOG.md                   版本变更记录
+      assets/                        图示资源
+      references/                    规则参考文档（00-11）
+      scripts/verify_offline.py      离线完整性、版本、结构与部署自检
+      scripts/check_sql_output.py    SQL 输出规则检查
+      scripts/verify_output_contract.py  模式输出契约校验
+      tests/README.md                验收场景与静态检查清单
+      tests/test_*.py                输出检查器回归测试
+  yabo-data-skills_第一性原理横纵分析报告.md/.html   项目自查报告（内部参考）
+```
+
+## 开发与验证
+
+改完规则或脚本，在仓库根目录跑两层检查：
+
+```bash
+# 1. 仓库级回归：规则口径、脚本契约、发布形态
+python -m unittest discover -s tests -p "test_*.py" -v
+
+# 2. 技能包自检：文件齐全、无禁用词、编码与换行合规
+cd skills/pg-function-craft
+python scripts/verify_offline.py --json
+```
+
+两层都通过再提交。测试文件命名带 `_red` 是历史遗留（最初先写测试后写实现），现在全部为 GREEN。
+
+## 边界说明
+
+- 本仓库只包含脱敏后的通用规则与脚本，不携带开发语料、样例库、风格档案、导出元数据或数据库连接配置。
+- `pg-function-craft` 默认不连接数据库，不执行 SQL、DDL、DML、`ANALYZE`、`VACUUM` 或 `EXPLAIN`，性能结论只做静态标记。
+- 仓库不做版本发布声明；需要更新时重新执行安装命令，或按所用 CLI 的更新流程操作。
