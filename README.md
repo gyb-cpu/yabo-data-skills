@@ -7,7 +7,7 @@
 | Skill | 版本 | 作用 |
 |---|---|---|
 | `pg-function-craft` | 见技能文件 | PostgreSQL / Greenplum 函数、存储过程与触发器函数的生成、改写与静态审查 |
-| `shenergy-dwd-development` | 0.4.0 | 申能各省份、业态 DWD 开发流程、产物与验收 |
+| `shenergy-dwd-development` | 0.4.1 | 申能各省份、业态 DWD 开发流程、产物与验收 |
 
 ## 安装
 
@@ -128,10 +128,11 @@ yabo-data-skills/
   .gitignore
   tests/                             仓库级回归测试（锁定规则文本与脚本契约）
     README.md                        各测试文件的职责说明
-    test_*.py                        48 个用例，Python 3.12 下全绿
+    test_*.py                        67 个用例，Python 3.12 下全绿
   skills/
     shenergy-dwd-development/        申能 DWD 开发流程与配置模板
       SKILL.md
+      CHANGELOG.md                   版本变更记录
       .env.example                   不含凭据的连接配置模板
       references/                    流程、交付、函数与连接说明
     pg-function-craft/
