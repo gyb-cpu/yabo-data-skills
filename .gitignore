@@ -19,3 +19,4 @@ Thumbs.db
 # 本地临时产物
 *.log
 *.tmp
+_msg.txt
