@@ -149,6 +149,8 @@ ITEM_END = re.compile(
 
 CASE_TOKEN = re.compile(r"\bCASE\b")
 END_TOKEN = re.compile(r"\bEND\b")
+# 以运算符起行的续行：上一条列表项被拆开继续写，不是新的列表项。
+CONT_OPERATOR = re.compile(r"^(\|\||[-+*/]|AND\b|OR\b)")
 
 
 def _paren_delta(line: str) -> int:
@@ -174,19 +176,19 @@ def _paren_delta(line: str) -> int:
 
 
 def _expr_delta(line: str) -> int:
-    """自下而上回溯时该行开启的表达式块数：括号净开数 + CASE/END 净未闭合数。
+    """自下而上回溯时，该行把我们带回多少层外层。
 
-    `END` 表示我们正从某个 CASE 的内部往上走（+1），`CASE` 表示找到了它的开头（-1）。
+    从目标行往上走，`(`/`CASE` 是内层的边界（-1），`)`/`END` 是正在离开内层（+1）。
     """
-    return _paren_delta(line) + len(END_TOKEN.findall(line)) - len(CASE_TOKEN.findall(line))
+    return -_paren_delta(line) + len(END_TOKEN.findall(line)) - len(CASE_TOKEN.findall(line))
 
 
 def check_comma_alignment(lines: list[str], violations: list[dict]) -> None:
     """F-32：前置逗号续行必须与首项同列。
 
-    向上找「同层首项」时同时跟踪括号与 CASE/END：跨行 CASE、被拆开的算术式
-    内部的续行缩进按层级递增是正确写法。规范 06 §1.5、§3 明确要求这类表达式
-    展开，检查器不得因此惩罚展开写法、逼迫把代码压成超长行。
+    向上找「同层首项」时同时跟踪括号与 CASE/END，并跳过运算符续行：跨行 CASE、
+    被拆开的算术式内部的续行缩进按层级递增是正确写法。规范 06 §1.5、§3 明确要求
+    这类表达式展开，检查器不得因此惩罚展开写法、逼迫把代码压成超长行。
     """
     for index, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -199,10 +201,11 @@ def check_comma_alignment(lines: list[str], violations: list[dict]) -> None:
             depth += _expr_delta(lines[cursor])
             previous = lines[cursor].strip()
             if (
-                depth <= 0
+                depth == 0
                 and previous
                 and not previous.startswith(",")
                 and not previous.startswith("--")
+                and not CONT_OPERATOR.match(previous)
             ):
                 first = cursor
                 break
