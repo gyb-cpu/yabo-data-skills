@@ -1,6 +1,6 @@
 ---
 name: pg-function-craft
-version: 0.4.3
+version: 0.4.4
 description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储过程或触发器函数时使用；固定使用已脱敏的通用风格，关注 f_/p_/v_ 命名、中文七字段头、前置逗号、集合式 SQL、临时表物化理由、日期谓词、默认 SECURITY INVOKER、动态 SQL 绑定与静态性能风险。不连接数据库，不执行 EXPLAIN。
 ---
 

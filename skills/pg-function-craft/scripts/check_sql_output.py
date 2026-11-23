@@ -147,21 +147,69 @@ ITEM_END = re.compile(
 )
 
 
+CASE_TOKEN = re.compile(r"\bCASE\b")
+END_TOKEN = re.compile(r"\bEND\b")
+
+
+def _paren_delta(line: str) -> int:
+    """该行净开括号数，忽略注释与单引号字符串。"""
+    depth = 0
+    quote = False
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if quote:
+            if char == "'":
+                quote = False
+        elif char == "'":
+            quote = True
+        elif line.startswith("--", index):
+            break
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        index += 1
+    return depth
+
+
+def _expr_delta(line: str) -> int:
+    """自下而上回溯时该行开启的表达式块数：括号净开数 + CASE/END 净未闭合数。
+
+    `END` 表示我们正从某个 CASE 的内部往上走（+1），`CASE` 表示找到了它的开头（-1）。
+    """
+    return _paren_delta(line) + len(END_TOKEN.findall(line)) - len(CASE_TOKEN.findall(line))
+
+
 def check_comma_alignment(lines: list[str], violations: list[dict]) -> None:
-    """F-32：前置逗号续行必须与首项同列。"""
+    """F-32：前置逗号续行必须与首项同列。
+
+    向上找「同层首项」时同时跟踪括号与 CASE/END：跨行 CASE、被拆开的算术式
+    内部的续行缩进按层级递增是正确写法。规范 06 §1.5、§3 明确要求这类表达式
+    展开，检查器不得因此惩罚展开写法、逼迫把代码压成超长行。
+    """
     for index, line in enumerate(lines, start=1):
         stripped = line.strip()
         if not stripped.startswith(","):
             continue
         cursor = index - 2
+        depth = 0
+        first = None
         while cursor >= 0:
+            depth += _expr_delta(lines[cursor])
             previous = lines[cursor].strip()
-            if previous and not previous.startswith(",") and not previous.startswith("--"):
+            if (
+                depth <= 0
+                and previous
+                and not previous.startswith(",")
+                and not previous.startswith("--")
+            ):
+                first = cursor
                 break
             cursor -= 1
-        if cursor < 0:
+        if first is None:
             continue
-        expected = len(lines[cursor]) - len(lines[cursor].lstrip(" "))
+        expected = len(lines[first]) - len(lines[first].lstrip(" "))
         actual = len(line) - len(line.lstrip(" "))
         if actual != expected:
             add(

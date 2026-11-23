@@ -2,6 +2,27 @@
 
 申能 DWD 开发技能的版本变更记录。版本号与 `SKILL.md` frontmatter 的 `version` 保持一致。
 
+## 0.0.3 — 2026-11-23
+
+补三条在干净环境复现过的遗漏：规则本来分散在段落里，没有形成「不做就错」的条目。
+
+- `references/函数与验收.md` §2.1 新增**禁止自造时段骨架**：不得用 `generate_series(1, 96)` 拼 `lpad` 字符串构造 96 点编码，`dim.dim_timeperiod_change` 是唯一时段来源（96 行，含 `time_part`/`time_24`/`time_48`），缺失即阻塞。
+- `references/函数与验收.md` 新增 §2.4「增量必须按变化集合」：`update_time` 增量收 `date[]`，删除与重算都 `= ANY(...)`；禁止扩成 `min/max` 区间再 `BETWEEN`；水位线半开区间，推导与抽取过滤一致。
+- `references/函数与验收.md` 新增 §2.5「保留既有函数的外部契约」：参数校验返回方式、`EXCEPTION` 包装与 `ERRCODE`、头部既有字段、观测点、临时表命名成对保留。
+- `references/流程与门禁.md` §5 同步上述三条，阶段流程可直接读到。
+- `SKILL.md` 入口段列出三条不可自行发挥项，并说明 `pg-function-craft` 的 F-32 只校验同层列表项，不要为过检把表达式压成超长单行。
+- 新增 `tests/test_function_contract_rules.py`：14 项断言锁定上述条目文本。
+
+### 缘起
+
+2026-11-23 在干净环境按本技能独立推导安徽售电四表函数，与目标库既有实现比对后发现：
+
+- 时段展开没用 `dim.dim_timeperiod_change`，自造了 `generate_series` + `lpad` 骨架，与同项目其他省份脚本口径分叉。
+- 增量写成了 `DELETE ... BETWEEN v_start AND v_end`，把水位线增量退化成区间全量重算；既有实现用 `v_changed_dates date[]`。
+- 参数非法时 `RAISE EXCEPTION`，而既有实现返回 `-1`；`EXCEPTION` 包装、`RAISE DEBUG`、头部 `*increment` 字段全部缺失。
+
+三项都不属于业务口径分歧，是技能没把要求写成条目导致的执行力差距。
+
 ## 0.0.2 — 2026-11-23
 
 - `references/函数与验收.md` 新增 §2.3「返回类型必须能装下行数」：SOP §5 模板的 `RETURNS smallint` 是模板缺陷，上限 32767，96 点表季度级分区必然溢出。

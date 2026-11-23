@@ -98,6 +98,42 @@ END;
 $function$;
 """
 
+# 规范 06 §1.5/§3 要求多行 CASE 与拆开的算术式展开；F-32 只对同层列表项生效，
+# 不得因表达式内部续行缩进而误报，否则检查器会反向逼迫把代码压成难读的长行。
+MULTILINE_EXPR_SQL = """\
+-- *name : f_demo_price
+-- *function : 演示跨行表达式
+-- *input : 1:起始日期
+-- *output : 影响行数
+-- *author : <team>
+-- *CreateDate : 2026-01-01
+-- *UpdateDate : 2026-01-01
+CREATE OR REPLACE FUNCTION demo.f_demo_price(p_start date)
+RETURNS integer
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+    v_rows integer := 0;
+BEGIN
+    SELECT
+        a.company
+        , CASE
+              WHEN coalesce(a.energy, 0) = 0 THEN 0
+              ELSE a.amount / a.energy
+          END AS price
+        , (coalesce(a.energy, 0)
+           - coalesce(a.other, 0))::numeric AS net_energy
+    FROM
+        demo.clearing AS a
+    WHERE
+        a.target_date >= p_start;
+
+    GET DIAGNOSTICS v_rows = ROW_COUNT;
+    RETURN v_rows;
+END;
+$function$;
+"""
+
 FORBIDDEN_IMPORTS = {
     "psycopg",
     "psycopg2",
@@ -227,6 +263,27 @@ class SqlOutputRuleCheckerRedTest(unittest.TestCase):
             offenders,
             [],
             msg=f"校验器不得引入数据库驱动或网络模块：{offenders}",
+        )
+
+    def test_multiline_expression_not_flagged_as_comma_misalignment(self):
+        """跨行 CASE / 拆开的算术式不得被 F-32 误报。
+
+        规范 06 要求这类表达式展开，检查器必须与规范一致；否则只能靠压行过关，
+        与「函数体内一律展开」的规则直接冲突。
+        """
+        proc, payload = self._run_checker(MULTILINE_EXPR_SQL)
+        rules = {item.get("rule") for item in payload.get("violations", [])}
+        self.assertNotIn(
+            "F-32",
+            rules,
+            msg=(
+                "跨行表达式被误报 F-32。\n"
+                f"violations={payload.get('violations')!r}"
+            ),
+        )
+        self.assertTrue(
+            payload.get("ok"),
+            msg=f"合规的跨行表达式样例不应有违规：{payload.get('violations')!r}",
         )
 
 
