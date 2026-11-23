@@ -81,6 +81,11 @@ class TimeperiodConversionRules(unittest.TestCase):
         self.assertIn("timeperiod", self.skill)
         self.assertIn("/4.0", self.skill)
 
+    def test_return_type_warns_smallint(self):
+        """必须提示 smallint 装不下分区行数。"""
+        self.assertIn("RETURNS integer", self.func)
+        self.assertIn("smallint", self.func)
+        self.assertIn("32767", self.func)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

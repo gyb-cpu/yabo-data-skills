@@ -2,6 +2,17 @@
 
 申能 DWD 开发技能的版本变更记录。版本号与 `SKILL.md` frontmatter 的 `version` 保持一致。
 
+## 0.4.2 — 2026-11-23
+
+- `references/函数与验收.md` 新增 §2.3「返回类型必须能装下行数」：SOP §5 模板的 `RETURNS smallint` 是模板缺陷，上限 32767，96 点表季度级分区必然溢出。
+  - 报错 `NumericValueOutOfRange: smallint out of range` 发生在函数末尾 `RETURN` 处，前面的 `DELETE`+`INSERT` 已执行完毕，表现为「像跑成功但报错」，极易误判为数据问题。
+  - 一律用 `RETURNS integer`、`v_rows integer`、`RETURN v_rows;`。
+- `tests/test_timeperiod_conversion_rules.py` 增加 1 项断言，锁定 §2.3 必须同时出现 `RETURNS integer`、`smallint` 与 `32767`。
+
+### 缘起
+
+0.4.1 规则生效后按季度分段重跑安徽出清影子表，10 段中 7 段报 `smallint out of range`（季度行数 51,264~52,992）。修正返回类型后 10 段全部成功，写入 428,544 行。
+
 ## 0.4.1 — 2026-11-23
 
 - `references/函数与验收.md` 新增 §2.1「时段换算方向」：补回原始《售电4表_迁移SOP》§2.6 中已有、但整理成技能时遗漏的明文规定。
