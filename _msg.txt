@@ -1,0 +1,7 @@
+docs(shenergy-dwd): 版本号改为从 0.0.1 起编号
+
+- SKILL.md version: 0.4.2 -> 0.0.2（与 CHANGELOG 最新条目一致）
+- CHANGELOG: 0.4.1/0.4.2 两条改为 0.0.1/0.0.2，缘起段落内的旧版本号同步
+- README 收录表版本 0.4.2 -> 0.0.2
+
+申能技能的版本线独立于 pg-function-craft，不再沿用其 0.4.x 序列。

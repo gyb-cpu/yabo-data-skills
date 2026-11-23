@@ -1,6 +1,6 @@
 ---
 name: shenergy-dwd-development
-version: 0.4.2
+version: 0.0.2
 description: |
   用于申能项目按省份和业态接手或开展 DWD 开发，例如"开发湖北新能源 DWD"、"按售电 SOP 迁移某省"、"接手出清清分清算结算"。按项目售电迁移 SOP 完成口径、探源、命名、DDL、计算、验收与交接；具体写库和运行范围以用户授权为准。生成、改写或审查 PostgreSQL 函数时使用 pg-function-craft，并按授权读取本地连接配置获取业务证据。
 ---
