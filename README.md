@@ -6,7 +6,8 @@
 
 | Skill | 版本 | 作用 |
 |---|---|---|
-| `pg-function-craft` | 0.4.0 | PostgreSQL / Greenplum 函数、存储过程与触发器函数的生成、改写与静态审查 |
+| `pg-function-craft` | 见技能文件 | PostgreSQL / Greenplum 函数、存储过程与触发器函数的生成、改写与静态审查 |
+| `shenergy-dwd-development` | 0.4.0 | 申能各省份、业态 DWD 开发流程、产物与验收 |
 
 ## 安装
 
@@ -26,7 +27,10 @@
 
 ```bash
 npx skills add gyb-cpu/yabo-data-skills --skill pg-function-craft
+npx skills add gyb-cpu/yabo-data-skills --skill shenergy-dwd-development
 ```
+
+申能技能的函数生成、改写和审查需要同时安装 `pg-function-craft`；两个技能分别安装、独立更新。安装后，将申能技能目录下的 `.env.example` 复制到业务项目根目录并命名为 `.env.shenergy`，由使用者填写建表工匠和数据库连接信息。实际配置不得提交或分享，详见申能技能的 `references/连接配置.md`。
 
 ### 自动发现安装
 
@@ -36,11 +40,11 @@ npx skills add gyb-cpu/yabo-data-skills --skill pg-function-craft
 npx skills add gyb-cpu/yabo-data-skills
 ```
 
-随后按提示选择 `pg-function-craft`。不同 CLI 版本的参数可能略有差异，必要时先查看 `npx skills add --help`。
+随后按提示选择所需技能；使用申能函数开发流程时选择两个技能。不同 CLI 版本的参数可能略有差异，必要时先查看 `npx skills add --help`。
 
 ### 不使用 CLI 时
 
-把 `skills/pg-function-craft/` 整个目录复制到目标 Agent 的技能目录，具体位置由该 Agent 的文档决定。目录中必须保留：
+把需要的 `skills/pg-function-craft/` 和 `skills/shenergy-dwd-development/` 各自完整复制到目标 Agent 的技能目录，具体位置由该 Agent 的文档决定。`pg-function-craft` 目录中必须保留：
 
 ```text
 SKILL.md
@@ -49,6 +53,8 @@ scripts/
 tests/
 assets/
 ```
+
+申能技能需保留 `SKILL.md`、`references/` 和隐藏文件 `.env.example`；仅分发空模板，不分发实际 `.env.shenergy`。
 
 ## 安装后验证
 
@@ -124,6 +130,10 @@ yabo-data-skills/
     README.md                        各测试文件的职责说明
     test_*.py                        48 个用例，Python 3.12 下全绿
   skills/
+    shenergy-dwd-development/        申能 DWD 开发流程与配置模板
+      SKILL.md
+      .env.example                   不含凭据的连接配置模板
+      references/                    流程、交付、函数与连接说明
     pg-function-craft/
       SKILL.md                       技能主规则与触发入口（frontmatter 含 semver）
       README.md                      技能自身说明
@@ -155,6 +165,7 @@ python scripts/verify_offline.py --json
 
 ## 边界说明
 
-- 本仓库只包含脱敏后的通用规则与脚本，不携带开发语料、样例库、风格档案、导出元数据或数据库连接配置。
+- 仓库可携带无凭据的连接配置模板，但不得携带实际连接配置、凭据、开发语料、样例库、风格档案或导出元数据。
+- `shenergy-dwd-development` 根据具体任务授权访问平台与数据库；`pg-function-craft` 仍只处理离线函数工程。
 - `pg-function-craft` 默认不连接数据库，不执行 SQL、DDL、DML、`ANALYZE`、`VACUUM` 或 `EXPLAIN`，性能结论只做静态标记。
 - 仓库不做版本发布声明；需要更新时重新执行安装命令，或按所用 CLI 的更新流程操作。

@@ -11,6 +11,11 @@ venv/
 .DS_Store
 Thumbs.db
 
+# 本地连接配置；允许发布不含凭据的模板
+.env
+.env.*
+!.env.example
+
 # 本地临时产物
 *.log
 *.tmp
