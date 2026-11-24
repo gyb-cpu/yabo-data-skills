@@ -99,6 +99,37 @@ class FunctionContractRules(unittest.TestCase):
         self.assertIn("F-32", self.skill)
         self.assertIn("同层列表项", self.skill)
 
+    def test_pg_skill_is_mandatory_not_optional(self):
+        """pg-function-craft 必须是必调项，「外部工具可选」不得覆盖它。"""
+        self.assertIn("必调项", self.func)
+        self.assertIn("必调", self.flow)
+        self.assertIn("必调", self.skill)
+        self.assertNotIn("引用外部工具是可选的", self.func)
+
+    def test_optional_applies_only_to_third_party_tools(self):
+        """「可选」只能覆盖包外工具，须点名 sqlglot/sqlfluff/pg_format。"""
+        self.assertIn("包外第三方工具", self.func)
+        for name in ("sqlglot", "sqlfluff", "pg_format"):
+            self.assertIn(name, self.func)
+
+    def test_checker_output_required_as_evidence(self):
+        """交付须附检查器实际输出，不能只写「已完成静态检查」。"""
+        self.assertIn("check_sql_output.py --json", self.func)
+        self.assertIn("check_sql_output.py --json", self.flow)
+        self.assertIn("check_sql_output.py --json", self.skill)
+
+    def test_checker_pass_is_not_syntax_proof(self):
+        """检查器通过不等于语法正确，必须再做数据库编译验证。"""
+        self.assertIn("不代表语法正确", self.func)
+        self.assertIn("ROLLBACK", self.func)
+        self.assertIn("编译验证", self.flow)
+
+    def test_acceptance_has_skill_invocation_check(self):
+        """验收清单必须有一项核对技能调用留痕。"""
+        self.assertIn("技能调用留痕", self.func)
+        self.assertIn("技能调用留痕", self.flow)
+        self.assertIn("不得写「已完成静态检查」", self.func)
+
     def test_version_matches_newest_changelog(self):
         """SKILL.md 版本号必须等于 CHANGELOG 最新条目。"""
         changelog = (SKILL_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

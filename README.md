@@ -7,7 +7,7 @@
 | Skill | 版本 | 作用 |
 |---|---|---|
 | `pg-function-craft` | 见技能文件 | PostgreSQL / Greenplum 函数、存储过程与触发器函数的生成、改写与静态审查 |
-| `shenergy-dwd-development` | 0.0.3 | 申能各省份、业态 DWD 开发流程、产物与验收 |
+| `shenergy-dwd-development` | 0.0.4 | 申能各省份、业态 DWD 开发流程、产物与验收 |
 
 ## 安装
 
