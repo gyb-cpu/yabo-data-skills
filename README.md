@@ -1,5 +1,7 @@
 # yabo-data-skills
 
+![yabo-data-skills](assets/yabo-data-skills-hero.svg)
+
 可复用的 Agent Skills 集合，通过通用的 skills CLI 分发，不绑定任何特定的 Agent 或 IDE。
 
 当前收录：
@@ -125,10 +127,13 @@ Get-Item "$env:USERPROFILE\.minimax\skills\pg-function-craft" | Select-Object Li
 ```text
 yabo-data-skills/
   README.md                          本文件：通用安装与使用说明
+  .gitattributes
   .gitignore
+  assets/
+    yabo-data-skills-hero.svg        README 封面
   tests/                             仓库级回归测试（锁定规则文本与脚本契约）
     README.md                        各测试文件的职责说明
-    test_*.py                        68 个用例，Python 3.12 下全绿
+    test_*.py                        87 个用例，Python 3.12 下全绿
   skills/
     shenergy-dwd-development/        申能 DWD 开发流程与配置模板
       SKILL.md
@@ -146,7 +151,6 @@ yabo-data-skills/
       scripts/verify_output_contract.py  模式输出契约校验
       tests/README.md                验收场景与静态检查清单
       tests/test_*.py                输出检查器回归测试
-  yabo-data-skills_第一性原理横纵分析报告.md/.html   项目自查报告（内部参考）
 ```
 
 ## 开发与验证
