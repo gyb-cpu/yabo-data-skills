@@ -130,6 +130,23 @@ class FunctionContractRules(unittest.TestCase):
         self.assertIn("技能调用留痕", self.flow)
         self.assertIn("不得写「已完成静态检查」", self.func)
 
+    def test_existing_table_columns_win_over_platform_entries(self):
+        """目标表已存在时，列名以既有列名为准，平台条目不得覆盖。"""
+        self.assertIn("存量表列名优先", self.flow)
+        self.assertIn("以既有列名为准", self.skill)
+        self.assertIn("以现库既有列名为准", self.flow)
+
+    def test_rename_requires_authorization(self):
+        """改名属破坏性变更：须单独提出影响面并获授权，不得与口径变更混交付。"""
+        self.assertIn("改名属破坏性变更", self.flow)
+        self.assertIn("获授权后才执行", self.flow)
+        self.assertIn("不得把改名混进口径变更一起交付", self.flow)
+        self.assertIn("改名属破坏性变更", self.skill)
+
+    def test_ddl_forbids_swapping_column_names(self):
+        """§4 DDL 不得因平台条目不同而更换既有列名。"""
+        self.assertIn("既有对象的列名不因平台条目不同而更换", self.flow)
+
     def test_version_matches_newest_changelog(self):
         """SKILL.md 版本号必须等于 CHANGELOG 最新条目。"""
         changelog = (SKILL_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
