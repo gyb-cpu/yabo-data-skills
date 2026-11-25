@@ -7,7 +7,7 @@
 
 ## 安装
 
-本 Skill 不绑定特定 Agent，安装位置由 Agent 或 skills CLI 决定。仓库级说明见仓库根目录的 `README.md`。
+本 Skill 不绑定特定 Agent。默认安装到执行安装命令时所在的项目，仅当前项目可见；仓库级说明见根目录 `README.md`。
 
 ### 通过 skills CLI
 
@@ -21,7 +21,7 @@ CLI 支持仓库自动发现时，可省略 `--skill`，再由提示选择 `pg-f
 npx skills add gyb-cpu/yabo-data-skills
 ```
 
-仓库为私有，匿名拉取会 404；先在本机配置好 GitHub 凭据（`gh auth login` 或带 token 的 git 凭据）。
+仓库为公有仓库，匿名拉取不需要 GitHub 登录；安装时不要添加 `-g`，除非明确需要所有项目共用。
 
 ### 手动复制
 
