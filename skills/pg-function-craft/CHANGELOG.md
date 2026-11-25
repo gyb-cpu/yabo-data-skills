@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-11-25
+
+统一函数头的可导出格式：头部必须位于 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前，不能再只放在 `CREATE` 前。
+
+- `04-固定风格.md`、`06-SQL排版规范.md`、`09-工程与函数结构规范.md`、`11-增量与水位线.md` 与 `README.md` 同步为中文八字段头，新增 `*increment`。
+- `check_sql_output.py` 增加 `F-21` 位置/字段、`F-36` 名称限定与一致性、`F-37` 输入参数说明、`F-38` 返回契约、`F-39` 增量说明、`F-40` 日期格式、`F-41` 分隔线检查；JSON 增加 `violation_count` 和实际命令。
+- 新增 `tests/test_function_header_contract.py`，覆盖 11 个函数头场景，并更新原有导出形态和合规样例。
+- 说明 `pg_get_functiondef` 不保留 `CREATE` 前普通注释，函数头必须进入 `prosrc` 才能随部署导出。
+
 ## 0.4.4 — 2026-11-23
 
 修复 `scripts/check_sql_output.py` 的 F-32 误报，使检查器与 `06-SQL排版规范.md` 的展开要求不再冲突。

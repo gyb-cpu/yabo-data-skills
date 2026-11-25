@@ -58,7 +58,16 @@ class MinimalChangeRulesTest(unittest.TestCase):
 
     def test_layout_rules_accept_exported_ddl_form(self):
         text = read(REFS / "06-SQL排版规范.md")
-        self.assertIn("保留原位", text, msg="F-21 应允许导出件的头部留在 $tag$ 之后。")
+        self.assertIn(
+            "`AS $function$` 之后",
+            text,
+            msg="F-21 应要求函数头位于 AS $function$ 之后。",
+        )
+        self.assertIn(
+            "pg_get_functiondef",
+            text,
+            msg="F-21 应解释 CREATE 前注释不会由 pg_get_functiondef 保留。",
+        )
         self.assertIn("`$BODY$`", text, msg="F-26 应允许导出件的 $BODY$ 标签。")
         self.assertIn("int4", text, msg="F-22 应保留导出件的类型拼写。")
 
@@ -170,8 +179,9 @@ class ExportedFormCheckerTest(unittest.TestCase):
         "/*****************************************************************\n"
         "*name       : dwd.f_demo\n"
         "*function   : 演示\n"
-        "*input      : 1:标志\n"
+        "*input      : p_flag 标志\n"
         "*output     : -1参数异常,0正常\n"
+        "*increment  : 不适用\n"
         "*author     : 张三\n"
         "*CreateDate : 2026-01-01\n"
         "*UpdateDate : 2026-01-01\n"

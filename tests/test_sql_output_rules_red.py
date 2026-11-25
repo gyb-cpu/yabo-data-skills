@@ -21,7 +21,7 @@
 至少识别以下规则（编号沿用仓库既有规则，不自造）：
     F-06     关键字未大写            references/06-SQL排版规范.md §2.1
     F-12     前置逗号仓库出现尾逗号   references/06-SQL排版规范.md §3.2
-    F-21     CREATE 之前缺七字段头    references/06-SQL排版规范.md §6.1
+    F-21     AS 函数体之后缺八字段头或头部位置错误    references/06-SQL排版规范.md §6.1
     STYLE-01 函数名未使用 f_ 前缀     references/04-固定风格.md §1
     PERF-29  过滤列被套 ::date        references/07-性能优化规则.md §4.7
 
@@ -47,7 +47,7 @@ CHECKER = SKILL_ROOT / "scripts" / "check_sql_output.py"
 
 REQUIRED_RULES = ("F-06", "F-12", "F-21", "PERF-29", "STYLE-01")
 
-# 故意写坏的样例：尾逗号、关键字小写、缺七字段头、列侧 ::date、函数名无 f_ 前缀。
+# 故意写坏的样例：尾逗号、关键字小写、缺八字段头、列侧 ::date、函数名无 f_ 前缀。
 BAD_SQL = """\
 create or replace function demo.get_orders(p_id bigint)
 returns bigint
@@ -65,17 +65,23 @@ $function$;
 
 # 符合 references/06、07 与固定风格的样例，用于证明校验器不是“永远报错”。
 GOOD_SQL = """\
--- *name : f_demo_orders
--- *function : 统计演示订单
--- *input : 1:起始日期
--- *output : -1参数异常,0正常
--- *author : <team>
--- *CreateDate : 2026-01-01
--- *UpdateDate : 2026-01-01
 CREATE OR REPLACE FUNCTION demo.f_demo_orders(p_start date)
-RETURNS bigint
+RETURNS integer
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
 AS $function$
+/*****************************************************************
+*name       : demo.f_demo_orders
+*function   : 统计演示订单
+*input      : p_start 起始日期
+*output     : -1参数异常, >=0影响行数
+*increment  : 不适用
+*author     : <team>
+*CreateDate : 2026-01-01
+*UpdateDate : 2026-01-01
+******************************************************************/
+
 DECLARE
     v_cnt bigint := 0;
     v_max_dt date;
@@ -101,17 +107,23 @@ $function$;
 # 规范 06 §1.5/§3 要求多行 CASE 与拆开的算术式展开；F-32 只对同层列表项生效，
 # 不得因表达式内部续行缩进而误报，否则检查器会反向逼迫把代码压成难读的长行。
 MULTILINE_EXPR_SQL = """\
--- *name : f_demo_price
--- *function : 演示跨行表达式
--- *input : 1:起始日期
--- *output : 影响行数
--- *author : <team>
--- *CreateDate : 2026-01-01
--- *UpdateDate : 2026-01-01
 CREATE OR REPLACE FUNCTION demo.f_demo_price(p_start date)
 RETURNS integer
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
 AS $function$
+/*****************************************************************
+*name       : demo.f_demo_price
+*function   : 演示跨行表达式
+*input      : p_start 起始日期
+*output     : -1参数异常, >=0影响行数
+*increment  : 不适用
+*author     : <team>
+*CreateDate : 2026-01-01
+*UpdateDate : 2026-01-01
+******************************************************************/
+
 DECLARE
     v_rows integer := 0;
 BEGIN
@@ -158,7 +170,7 @@ class SqlOutputRuleCheckerRedTest(unittest.TestCase):
         "references/07-性能优化规则.md 的 PERF-29 只能人工对照，"
         "没有可重复、可断言的机器校验入口；tests/README.md 也只是人工清单。\n"
         "期望：脚本以 --json 输出 violations（rule/line/message），"
-        "并对尾逗号、关键字小写、缺七字段头、列侧 ::date、函数名缺 f_ 前缀分别报 "
+        "并对尾逗号、关键字小写、缺八字段头、列侧 ::date、函数名缺 f_ 前缀分别报 "
         "F-12 / F-06 / F-21 / PERF-29 / STYLE-01。"
     )
 
@@ -217,7 +229,7 @@ class SqlOutputRuleCheckerRedTest(unittest.TestCase):
             [],
             msg=(
                 f"未报告必需规则 {missing}；实际报告 {sorted(r for r in reported if r)}。\n"
-                "样例同时包含：尾逗号（F-12）、关键字小写（F-06）、缺七字段头（F-21）、"
+                "样例同时包含：尾逗号（F-12）、关键字小写（F-06）、缺八字段头（F-21）、"
                 "列侧 a.dt::date（PERF-29）、函数名 demo.get_orders（STYLE-01）。"
             ),
         )

@@ -1,7 +1,7 @@
 ---
 name: pg-function-craft
-version: 0.4.4
-description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储过程或触发器函数时使用；固定使用已脱敏的通用风格，关注 f_/p_/v_ 命名、中文七字段头、前置逗号、集合式 SQL、临时表物化理由、日期谓词、默认 SECURITY INVOKER、动态 SQL 绑定与静态性能风险。不连接数据库，不执行 EXPLAIN。
+version: 0.5.0
+description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储过程或触发器函数时使用；固定使用已脱敏的通用风格，关注 f_/p_/v_ 命名、函数体内中文八字段头、前置逗号、集合式 SQL、临时表物化理由、日期谓词、默认 SECURITY INVOKER、动态 SQL 绑定与静态性能风险。不连接数据库，不执行 EXPLAIN。
 ---
 
 # PostgreSQL 函数工程
@@ -26,8 +26,9 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 定义见 `references/04-固定风格.md`，要点如下：
 
 - 命名：函数 `f_` + 小写 `snake_case`；参数 `p_`；局部变量 `v_`；游标 `cur`/`cur2`。
-- 头部：`CREATE` 之前放中文七字段头（`*name`、`*function`、`*input`、`*output`、`*author`、
-  `*CreateDate`、`*UpdateDate`）；`*author` 改写时保留原作者，新增时写 `<待补充>`。
+- 头部：放在 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前，使用中文八字段头
+  （`*name`、`*function`、`*input`、`*output`、`*increment`、`*author`、`*CreateDate`、`*UpdateDate`）。
+  只写在 `CREATE` 之前的注释不会被 `pg_get_functiondef` 导出；`*author` 改写时保留原作者，新增时写 `待补充`。
 - 排版：前置逗号、4 空格缩进、关键字大写、类型与内置函数小写、子句关键字独占一行。
 - 结构：`DECLARE` → `BEGIN` → `EXCEPTION` → `END`；编号段注释；显式列清单与 `JOIN`。
 - SQL 与 PL/pgSQL 分层组织：单条内用 CTE/子查询，跨语句才考虑临时表。
@@ -94,7 +95,7 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 1. 动笔写 SQL 之前，先确定：对象类型、签名、返回形态、NULL 与错误契约、volatility、权限、
    预期数据量、并发、引擎与版本，以及目标表的 DDL（列、键、分区、分布、索引与约束）。
    所有未知项放进 `Assumptions`，并显式列出缺失输入。
-2. 按 `references/04-固定风格.md` 确定命名、七字段头、排版与结构；安全与正确性默认值读
+2. 按 `references/04-固定风格.md` 确定命名、函数体内八字段头、排版与结构；安全与正确性默认值读
    `references/01-基线规范.md`；权限、`search_path`、事务边界与错误契约读
    `references/09-工程与函数结构规范.md`；PL/pgSQL 语法可用性、游标、动态 SQL 与触发器形态
    读 `references/10-PLpgSQL语法与函数形态.md`。
@@ -154,7 +155,7 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 
 交付前可运行两个离线启发式检查器：
 
-- `python scripts/check_sql_output.py --json <file.sql>`：检查 `F-06`、`F-12`、`F-21`、`REV-M02`、`PERF-29` 等可机器判定规则；
+- `python scripts/check_sql_output.py --json <file.sql>`：检查 `F-06`、`F-12`、`F-21`、`F-36`～`F-41`、`REV-M02`、`PERF-29` 等可机器判定规则；
 - `python scripts/verify_output_contract.py --mode <generate|rewrite|review> --file <output.md> --json`：检查模式段落、顺序、证据标签和未实测性能断言。
 
 两个检查器只使用 Python 标准库，不连接数据库、不访问网络、不执行 SQL。它们是离线启发式检查器，不是完整 SQL 解析器，也不产生执行计划或真实性能结论。退出码统一为 `0`（通过）、`1`（发现问题）、`2`（用法或读取错误）。
@@ -177,7 +178,7 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 | 使用边界、无数据库连接、临时表理由、日期过滤 | `references/00-风格与边界.md` |
 | 安全、正确性、事务、临时表、引擎或性能的默认值 | `references/01-基线规范.md` |
 | 常见反模式与通用反模式 | `references/02-反模式.md` |
-| 固定风格：命名、七字段头、排版、结构、集合式、日期、安全、动态 SQL | `references/04-固定风格.md` |
+| 固定风格：命名、函数体内八字段头、排版、结构、集合式、日期、安全、动态 SQL | `references/04-固定风格.md` |
 | 重写契约、diff 纪律或行为等价检查 | `references/05-重写协议.md` |
 | 缩进、换行、对齐、大小写与注释的排版规则 | `references/06-SQL排版规范.md` |
 | 索引、统计、锁、批量写入、分页、临时表与 GP 6.6 差异 | `references/07-性能优化规则.md` |

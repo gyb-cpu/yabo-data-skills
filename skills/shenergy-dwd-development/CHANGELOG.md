@@ -2,6 +2,14 @@
 
 申能 DWD 开发技能的版本变更记录。版本号与 `SKILL.md` frontmatter 的 `version` 保持一致。
 
+## 0.1.0 — 2026-11-25
+
+将申能 DWD 的函数头规范收敛为部署后可导出的八字段格式。
+
+- `references/函数与验收.md` 新增 §2.8：函数头位于 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前；说明 `pg_get_functiondef` 只保留函数体内注释。
+- `SKILL.md`、`references/流程与门禁.md` 与 `references/产物契约.md` 同步函数头位置、八字段要求、返回契约和导出验收条件。
+- 明确 `*name` schema 全限定、`*input` 参数业务含义、`*output` 行数契约、`*increment` 不适用时仍需保留、日期格式和分隔线要求。
+
 ## 0.0.6 — 2026-11-25
 
 补回《售电4表_迁移SOP》里有、但整理成技能时丢失的规则，并解决 SOP 模板与 0.0.3 增量规则的正面冲突。

@@ -17,7 +17,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 python -m unittest tests.test_reference_consistency_red -v
 ```
 
-当前基线：`Ran 48 tests ... OK`（Python 3.12）。
+当前基线：`142 passed`（Python 3.12）。
 
 ## 各文件职责
 
@@ -26,7 +26,8 @@ python -m unittest tests.test_reference_consistency_red -v
 | `test_reference_consistency_red.py` | `references/00`–`11` 之间的口径一致：冲突优先级只在 `00` 定义一次、`search_path` 写法统一、返回码契约不越界套用、`*author` 不写真实个人 |
 | `test_release_contract_red.py` | 两个 `SKILL.md` 的 semver、`CHANGELOG.md` 契约、README 技能表版本同步，以及 `verify_offline.py` 的版本检查 |
 | `test_structure_deploy_red.py` | 安装形态：必备目录齐全、文档内引用可解析、`description`/目录名/`name` 三者一致 |
-| `test_sql_output_rules_red.py` | `check_sql_output.py` 的 `F-06`/`F-12`/`F-21`/`REV-M02`/`PERF-29` 判定与退出码 |
+| `test_sql_output_rules_red.py` | `check_sql_output.py` 的基础规则、输出契约、退出码与原有回归 |
+| `test_function_header_contract.py` | 函数头必须位于 `AS $function$` 之后；验证八字段、名称、输入、返回契约、增量、日期和分隔线 |
 | `test_rewrite_minimal_change.py` | 改写纪律：最小改动、保留导出形态（引号标识符、`pg_catalog.int2`、`$BODY$`）、保留原署名 |
 | `test_etl_path_rules.py` | ETL 路径盘点契约：稀疏日期、显式区间、主源为 0、备用源独有键、冲突优先级 |
 | `test_incremental_module_red.py` | 增量模块 `INC-01`–`INC-14` 的存在性、路由登记与哨兵日期识别 |

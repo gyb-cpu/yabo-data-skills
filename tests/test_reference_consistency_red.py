@@ -141,22 +141,35 @@ class ReferenceConsistencyTest(unittest.TestCase):
         self.assertIn("§1.1", review)
 
     def test_complete_function_examples_satisfy_header_rule(self):
+        fields = (
+            "*name",
+            "*function",
+            "*input",
+            "*output",
+            "*increment",
+            "*author",
+            "*CreateDate",
+            "*UpdateDate",
+        )
         for path in sorted(REFS.glob("*.md")):
             for index, (before, block) in enumerate(sql_blocks(path)):
                 body = "\n".join(block)
                 if "CREATE OR REPLACE FUNCTION" not in body:
                     continue
-                if any("-- *name" in line for line in block):
+                if "节选" in "\n".join(before):
                     continue
                 with self.subTest(path=path.name, block=index):
-                    self.assertIn(
-                        "节选",
-                        "\n".join(before),
-                        msg=(
-                            f"{path.name} 第 {index} 个示例含 CREATE OR REPLACE FUNCTION，"
-                            "但既无七字段头（F-21），也未标注“节选”。"
-                        ),
-                    )
+                    self.assertIn("*name", body, "完整示例必须有函数体内头部")
+                    as_match = re.search(r"(?im)^AS\s+\$[^\n]+\$[ \t]*$", body)
+                    self.assertIsNotNone(as_match, "完整示例缺少 AS $tag$")
+                    as_end = as_match.end()
+                    stop = re.search(r"(?im)^[ \t]*(?:DECLARE|BEGIN)\b", body[as_end:])
+                    self.assertIsNotNone(stop, "完整示例头部应位于 DECLARE/BEGIN 之前")
+                    header_end = as_end + stop.start()
+                    header = body[as_end:header_end]
+                    self.assertIn("*name", header)
+                    for field in fields:
+                        self.assertIn(field, header, f"头部缺少 {field}")
 
 
 class CheckerAlignmentTest(unittest.TestCase):
@@ -203,17 +216,20 @@ class CheckerAlignmentTest(unittest.TestCase):
 
     def test_naming_violation_uses_style_rule_id(self):
         sql = (
-            "-- *name : get_orders\n"
-            "-- *function : 取订单\n"
-            "-- *input : 1:起始日期\n"
-            "-- *output : 0正常\n"
-            "-- *author : <team>\n"
-            "-- *CreateDate : 2026-01-01\n"
-            "-- *UpdateDate : 2026-01-01\n"
             "CREATE OR REPLACE FUNCTION demo.get_orders(p_start date)\n"
             "RETURNS bigint\n"
             "LANGUAGE plpgsql\n"
             "AS $function$\n"
+            "/*****************************************************************\n"
+            "*name       : demo.get_orders\n"
+            "*function   : 取订单\n"
+            "*input      : p_start 起始日期\n"
+            "*output     : -1参数异常, 0正常\n"
+            "*increment  : 不适用\n"
+            "*author     : <team>\n"
+            "*CreateDate : 2026-01-01\n"
+            "*UpdateDate : 2026-01-01\n"
+            "******************************************************************/\n"
             "BEGIN\n"
             "    RETURN 0;\n"
             "END;\n"

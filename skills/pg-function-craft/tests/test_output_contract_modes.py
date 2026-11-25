@@ -97,7 +97,7 @@ COMPLIANT_GENERATE = textwrap.dedent(
 
     ## 自检
 
-    - 命名 `f_`/`p_`、七字段头、前置逗号、`SECURITY INVOKER` 逐条自检通过。
+    - 命名 `f_`/`p_`、函数体内八字段头、前置逗号、`SECURITY INVOKER` 逐条自检通过。
     """
 )
 

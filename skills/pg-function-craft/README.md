@@ -63,7 +63,7 @@ python scripts/verify_offline.py --json
 生成和改写默认遵循：
 
 - 函数名：`f_` + 小写 `snake_case`；参数：`p_`；局部变量：`v_`；
-- `CREATE` 前使用中文七字段头：`name / function / input / output / author / CreateDate / UpdateDate`；
+- 在 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前放中文八字段头：`name / function / input / output / increment / author / CreateDate / UpdateDate`；
 - 前置逗号、4 空格缩进、关键字大写、显式列清单；
 - 集合式 SQL 优先；循环必须有明确理由、行数上界和批量策略；
 - 单条语句使用 CTE 或子查询；临时表只有在跨语句复用、昂贵计算复用、隔离/分批等情况下才物化；
@@ -159,7 +159,7 @@ tests/test_output_contract_modes.py 输出契约回归测试
 
 本目录不携带个人样例、风格档案、数据库连接信息或导出元数据。
 
-当前技能版本：`0.4.3`。变更记录见 `CHANGELOG.md`。
+当前技能版本：`0.5.0`。变更记录见 `CHANGELOG.md`。
 
 `00`、`01` 与 `05` 的条目没有编号，按“文件名 + 小节名”引用（如“`00-风格与边界.md` 的
 冲突优先级”）；`04` 的条目使用 `STYLE-01`…`STYLE-10`。
@@ -190,23 +190,26 @@ tests/test_output_contract_modes.py 输出契约回归测试
 | 对齐 | 单个空格分隔，不用多空格做列对齐 |
 | 语句 | 一条语句一个 `;`，语句之间最多 1 个空行 |
 | 函数体 | 统一 `$function$` 标签，`DECLARE`/`BEGIN`/`EXCEPTION`/`END` 分段 |
-| 头部 | `CREATE` 之前放中文七字段头，顶格 |
+| 头部 | 放在 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前的中文八字段块注释 |
 | 日期谓词 | 列侧裸露：`col >= p_start::date`，不写 `col::date >= ...` |
 
 模板：
 
 ```sql
--- *name : f_demo
--- *function : 说明
--- *input : 1:参数
--- *output : 0正常
--- *author : <team>
--- *CreateDate : 2026-01-01
--- *UpdateDate : 2026-01-01
 CREATE OR REPLACE FUNCTION demo.f_demo(p_start date)
 RETURNS bigint
 LANGUAGE plpgsql
 AS $function$
+/*****************************************************************
+*name       : demo.f_demo
+*function   : 演示函数
+*input      : p_start 起始日期
+*output     : -1参数异常, 0正常
+*increment  : 不适用
+*author     : <team>
+*CreateDate : 2026-01-01
+*UpdateDate : 2026-01-01
+******************************************************************/
 BEGIN
     RETURN 0;
 END;

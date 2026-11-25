@@ -6,7 +6,13 @@
 
   F-06     关键字未大写
   F-12     前置逗号仓库出现尾逗号
-  F-21     CREATE 之前缺少中文七字段头
+  F-21     AS 函数体之后缺少中文八字段头或字段为空
+  F-36     *name 未使用 schema 限定或与 CREATE FUNCTION 不一致
+  F-37     *input 未说明全部参数的业务含义
+  F-38     *output 与函数返回行为不一致
+  F-39     增量函数未说明水位线/回看/半开区间
+  F-40     *CreateDate / *UpdateDate 格式错误
+  F-41     函数头分隔线缺失
   REV-M02  函数名未使用 f_ 前缀
   PERF-29  过滤列被套 ::date / ::timestamp
 
@@ -33,6 +39,7 @@ HEADER_FIELDS = (
     "function",
     "input",
     "output",
+    "increment",
     "author",
     "CreateDate",
     "UpdateDate",
@@ -132,6 +139,16 @@ COLUMN_CAST_PATTERN = re.compile(
 )
 
 DOLLAR_TAG_PATTERN = re.compile(r"\$[A-Za-z_]\w*\$|\$\$")
+
+BODY_TAG_PATTERN = re.compile(
+    r"(?is)\bAS\s+(\$[A-Za-z_]\w*\$|\$\$)[ \t]*\n"
+)
+
+DATE_VALUE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+HEADER_START_PATTERN = re.compile(r"(?m)^/\*{10,}\s*$")
+
+HEADER_END_PATTERN = re.compile(r"(?m)^\*{10,}/\s*$")
 
 INDEX_STATEMENT = re.compile(r"(?is)^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\b")
 
@@ -310,10 +327,53 @@ def index_statement_lines(lines: list[str]) -> set[int]:
     return covered
 
 
-def header_field_pattern(field: str) -> re.Pattern[str]:
-    return re.compile(
-        r"(?im)^\s*(?:--\s*)?(?:\*\s*){0,2}" + re.escape(field) + r"\s*:"
+def header_field_match(field: str, segment: str) -> re.Match[str] | None:
+    return re.search(
+        r"(?im)^[ \t]*\*[ \t]*" + re.escape(field) + r"[ \t]*:[ \t]*(.*?)[ \t]*$",
+        segment,
     )
+
+
+def header_values(segment: str) -> dict[str, str | None]:
+    values: dict[str, str | None] = {}
+    for field in HEADER_FIELDS:
+        match = header_field_match(field, segment)
+        values[field] = match.group(1).strip() if match else None
+    return values
+
+
+def matching_paren_end(text: str, open_index: int) -> int:
+    depth = 0
+    in_single = False
+    in_double = False
+    index = open_index
+    while index < len(text):
+        char = text[index]
+        following = text[index + 1] if index + 1 < len(text) else ""
+        if in_single:
+            if char == "'" and following == "'":
+                index += 2
+                continue
+            if char == "'":
+                in_single = False
+        elif in_double:
+            if char == '"' and following == '"':
+                index += 2
+                continue
+            if char == '"':
+                in_double = False
+        elif char == "'":
+            in_single = True
+        elif char == '"':
+            in_double = True
+        elif char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return -1
 
 
 def sanitize(text: str) -> str:
@@ -448,41 +508,156 @@ def check_header(text: str, violations: list[dict]) -> None:
     if match is None:
         return
 
-    def missing_in(segment: str) -> list[str]:
-        return [
-            field
-            for field in HEADER_FIELDS
-            if header_field_pattern(field).search(segment) is None
-        ]
-
-    # F-21 首选：头部在 CREATE 之前。
-    prefix = text[: match.start()]
-    missing = missing_in(prefix)
-    if not missing:
+    create_line = text[: match.start()].count("\n") + 1
+    name_match = FUNCTION_NAME_PATTERN.search(text, match.start())
+    if name_match is None:
         return
-
-    # 导出件（pg_get_functiondef）：头部落在 AS $tag$ 之后、DECLARE/BEGIN 之前，同样合规。
-    body_start = match.end()
-    stops = [
-        position
-        for position in (
-            text.find(chr(10) + "DECLARE", body_start),
-            text.find(chr(10) + "BEGIN", body_start),
-        )
-        if position != -1
-    ]
-    body_head = text[match.start(): min(stops) if stops else len(text)]
-    if not missing_in(body_head):
-        return
-
-    if missing:
-        line = text[: match.start()].count("\n") + 1
+    body_match = BODY_TAG_PATTERN.search(text, match.end())
+    if body_match is None:
         add(
             violations,
             "F-21",
-            line,
-            "CREATE 之前缺少中文七字段头：" + "、".join(missing) + "（F-21）",
+            create_line,
+            "找不到 AS 美元引用函数体；函数头必须放在 AS $function$ 之后、"
+            "DECLARE/BEGIN 之前（F-21）",
         )
+        return
+
+    tag = body_match.group(1)
+    body_start = body_match.end()
+    closing = text.find(tag, body_start)
+    body_end = closing if closing != -1 else len(text)
+    body = text[body_start:body_end]
+
+    stop_match = re.search(r"(?im)^[ \t]*(?:DECLARE|BEGIN)\b", body)
+    header_segment = body[: stop_match.start()] if stop_match else body
+    values = header_values(header_segment)
+    missing = [
+        field for field in HEADER_FIELDS
+        if values[field] is None or not values[field]
+    ]
+
+    prefix = text[: match.start()]
+    prefix_values = header_values(prefix)
+    prefix_has_header = any(value is not None for value in prefix_values.values())
+
+    if missing:
+        if prefix_has_header:
+            message = (
+                "函数头只写在 CREATE 之前不会被 pg_get_functiondef 保留；"
+                "必须放入 AS $function$ 之后、DECLARE/BEGIN 之前（F-21）"
+            )
+        else:
+            message = "函数体内缺少中文八字段头：" + "、".join(missing) + "（F-21）"
+        add(violations, "F-21", create_line, message)
+        return
+
+    if not (HEADER_START_PATTERN.search(header_segment) and HEADER_END_PATTERN.search(header_segment)):
+        add(
+            violations,
+            "F-41",
+            create_line,
+            "函数头必须使用 /***** 与 *****/ 分隔线（F-41）",
+        )
+
+    positions = [
+        header_field_match(field, header_segment).start()
+        for field in HEADER_FIELDS
+        if header_field_match(field, header_segment) is not None
+    ]
+    if positions != sorted(positions):
+        add(
+            violations,
+            "F-21",
+            create_line,
+            "函数头字段顺序必须为 name、function、input、output、increment、"
+            "author、CreateDate、UpdateDate（F-21）",
+        )
+
+    name_value = (values["name"] or "").strip()
+    create_name = name_match.group(1).replace('"', "")
+    qualified_match = re.fullmatch(
+        r"([A-Za-z_][A-Za-z0-9_$]*)\.([A-Za-z_][A-Za-z0-9_$]*)",
+        name_value,
+    )
+    if qualified_match is None:
+        add(
+            violations,
+            "F-36",
+            create_line,
+            f"*name 必须使用 schema 全限定名，实际为 {name_value!r}（F-36）",
+        )
+    elif name_value.lower() != create_name.lower():
+        add(
+            violations,
+            "F-36",
+            create_line,
+            f"*name {name_value} 与 CREATE FUNCTION 名称 {create_name} 不一致（F-36）",
+        )
+
+    open_index = name_match.end() - 1
+    close_index = matching_paren_end(text, open_index)
+    signature = text[open_index + 1: close_index] if close_index != -1 else ""
+    parameter_names = re.findall(r"(?i)\b(p_[a-z0-9_]*)\b", signature)
+    input_value = values["input"] or ""
+    missing_params = [
+        name for name in parameter_names
+        if re.search(rf"(?i)\b{re.escape(name)}\b", input_value) is None
+    ]
+    if missing_params:
+        add(
+            violations,
+            "F-37",
+            create_line,
+            "*input 未说明参数业务含义：" + "、".join(missing_params) + "（F-37）",
+        )
+
+    output_value = values["output"] or ""
+    body_after_header = body[len(header_segment):]
+    body_code = sanitize(body_after_header)
+    row_count_signal = (
+        re.search(r"(?is)\bGET\s+DIAGNOSTICS\b[\s\S]{0,300}?\bROW_COUNT\b", body_code)
+        or re.search(r"(?is)\bRETURN\s+v_[a-z0-9_]*(?:rows?|row_count|cnt|count|affected)[a-z0-9_]*\b", body_code)
+    )
+    if row_count_signal and not (
+        (">=0" in output_value or "≥0" in output_value) and "行数" in output_value
+    ):
+        add(
+            violations,
+            "F-38",
+            create_line,
+            "*output 声明与函数返回行数不一致；应写明 -1参数异常, >=0影响行数（F-38）",
+        )
+    if re.search(r"(?is)\bRETURN\s+-1\b", body_code) and "-1" not in output_value:
+        add(
+            violations,
+            "F-38",
+            create_line,
+            "*output 未声明代码实际使用的 -1 参数异常返回码（F-38）",
+        )
+
+    increment_value = (values["increment"] or "").strip()
+    incremental_body = re.search(
+        r"(?i)\bupdate_time\b|\bv_changed_dates\b|\bv_changed_months\b",
+        body_code,
+    )
+    if incremental_body and increment_value.lower() in {"", "不适用", "n/a", "none"}:
+        add(
+            violations,
+            "F-39",
+            create_line,
+            "增量函数必须说明水位线、回看窗口和半开区间，不能写“不适用”（F-39）",
+        )
+
+    for field in ("CreateDate", "UpdateDate"):
+        value = values[field] or ""
+        if DATE_VALUE_PATTERN.fullmatch(value) is None:
+            add(
+                violations,
+                "F-40",
+                create_line,
+                f"*{field} 必须是 YYYY-MM-DD，实际为 {value!r}（F-40）",
+            )
 
 
 def check_function_name(text: str, violations: list[dict]) -> None:
@@ -568,7 +743,14 @@ def main(argv: list[str] | None = None) -> int:
     result = {
         "ok": not violations,
         "database_connected": False,
+        "violation_count": len(violations),
         "violations": violations,
+        "command": [
+            "python",
+            "scripts/check_sql_output.py",
+            "--json",
+            str(path),
+        ],
     }
 
     if args.json:

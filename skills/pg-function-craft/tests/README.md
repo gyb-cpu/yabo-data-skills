@@ -19,8 +19,8 @@
 ## 2. 固定风格
 
 - [ ] 函数名 `f_` 前缀、全小写 `snake_case`；参数 `p_`，局部变量 `v_`。
-- [ ] 头部为中文七字段块（`*name`、`*function`、`*input`、`*output`、`*author`、
-      `*CreateDate`、`*UpdateDate`），位于 `CREATE` 之前、顶格。
+- [ ] 函数头为函数体内中文八字段块（`*name`、`*function`、`*input`、`*output`、`*increment`、`*author`、
+      `*CreateDate`、`*UpdateDate`），位于 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前。
 - [ ] `*author` 写团队名或明确占位符，没有出现真实个人姓名、原属主姓名或可反查个人的标识。
 - [ ] 缩进为 4 空格；函数参数与 `SELECT` 列表使用前置逗号，同一文件没有混用尾逗号。
 - [ ] 关键字大写、类型与内置函数小写；`LANGUAGE` 大写、语言名 `plpgsql` 小写。
@@ -104,7 +104,7 @@
 
 - [ ] SQL 输出：`python scripts/check_sql_output.py --json <file.sql>`。JSON 含
       `ok`、`database_connected: false` 与 `violations`（`rule` / `line` / `message`）；
-      至少覆盖 `F-06`、`F-12`、`F-21`、`STYLE-01`、`PERF-29`、`INC-05`。
+      至少覆盖 `F-06`、`F-12`、`F-21`、`F-36`～`F-41`、`STYLE-01`、`PERF-29`、`INC-05`；并包含 `violation_count` 与实际命令。
 - [ ] 仓库书面约定用尾逗号时，加 `--comma-style trailing`；否则 `F-12` 会按前置逗号误报。
       `CREATE INDEX ... ((col::date))` 属于表达式索引，不报 `PERF-29`。
 - [ ] 模式输出：`python scripts/verify_output_contract.py --mode generate --file <output.md> --json`。

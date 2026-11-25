@@ -339,17 +339,22 @@ END AS status_desc
 
 ### 6.1 头部注释块
 
-- F-21 `MUST` 头部块放在 `CREATE` 之前，顶格；从 `pg_get_functiondef` 导出的既有函数，头部
-  通常落在 `AS $tag$` 之后、`DECLARE`/`BEGIN` 之前，**保留原位，不要为满足本条而搬到 `CREATE`
-  之前**（搬运会让下次导出产生无意义 diff）。字段顺序按项目模板（默认七字段：
-  `*name`、`*function`、`*input`、`*output`、`*author`、`*CreateDate`、`*UpdateDate`）。
-  本技能 `README.md` 的模板用 `--` 行注释，字段行以 `*name` 顶格；`pg_get_functiondef` 导出件
-  的历史形态是函数体内 `/* ... */` 块。新代码在 `--` 与 `/* */` 中选一种，同一仓库统一，
-  不要一半 `--`、一半 `/* */`。
+- F-21 `MUST` 头部块放在 `AS $function$` 之后、`DECLARE` 或 `BEGIN` 之前，使用独立的
+  `/***** ... *****/` 块注释。只写在 `CREATE` 之前的普通注释不算合格：`pg_get_functiondef`
+  不会保留它，部署后无法从 `prosrc` 导出。
+- 必需字段及顺序固定为：`*name`、`*function`、`*input`、`*output`、`*increment`、`*author`、
+  `*CreateDate`、`*UpdateDate`。字段名称和冒号前的对齐风格保持不变。
+- F-36 `MUST` `*name` 使用 schema 全限定名，并与实际 `CREATE FUNCTION` 名称一致。
+- F-37 `MUST` `*input` 包含全部 `p_` 参数名并解释业务含义；不能只写类型。
+- F-38 `MUST` `*output` 与代码实际返回行为一致；返回影响行数时写
+  `-1参数异常, >=0影响行数`，不能写 `0正常`。
+- F-39 `MUST` 使用 `update_time`、`v_changed_dates` 或 `v_changed_months` 的增量函数必须说明
+  水位线、回看窗口和半开区间；非增量函数写 `不适用`。
+- F-40 `MUST` `*CreateDate` / `*UpdateDate` 使用 `YYYY-MM-DD`。
+- F-41 `MUST` 函数头必须有 `/*****` 起始分隔线和 `*****/` 结束分隔线。
 - `*author` 写项目允许的署名或明确占位符；不得把真实人名、手机号、
   邮箱、内网地址、账号、连接串写进注释。
-- 头部块不参与自动换行；不要让 `pgFormatter -C` 或任何 formatter 重排它。`--` 行被合并或
-  `/* */` 边界被移动，都会改变注释范围。
+- 头部块不参与自动换行；不要让 `pgFormatter -C` 或任何 formatter 重排它。
 
 ### 6.2 CREATE 头
 
@@ -367,18 +372,28 @@ END AS status_desc
   - `RETURNS TABLE (...)` 的列定义一项一行。
 
 ```sql
--- *name : f_demo
--- *function : 演示函数头与函数体
--- *input : 1:主键
--- *output : 0正常
--- *author : <team>
--- *CreateDate : 2026-01-01
--- *UpdateDate : 2026-01-01
 CREATE OR REPLACE FUNCTION demo.f_demo(p_id bigint, p_from date)
 RETURNS bigint
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
 AS $function$
-...
+/*****************************************************************
+*name       : demo.f_demo
+*function   : 演示函数
+*input      : p_id 主键, p_from 起始日期
+*output     : -1参数异常, 0正常
+*increment  : 不适用
+*author     : <team>
+*CreateDate : 2026-01-01
+*UpdateDate : 2026-01-01
+******************************************************************/
+
+DECLARE
+    v_cnt bigint := 0;
+BEGIN
+    RETURN 0;
+END;
 $function$;
 ```
 
@@ -526,7 +541,7 @@ WHERE
   - 文件/函数头按仓库模板：本技能 `README.md` 用 `--` 行块，字段行以 `*name` 顶格；导出件
     常用 `/* ... */` 顶格块。两种都可用，但同一仓库不要混用。
   - 段注释 `-- 1. 说明` 与当前语句同列；行尾注释与代码之间至少 2 个空格，`--` 后 1 个空格。
-  - 普通多行说明用 `/* ... */`，每行以 ` * ` 对齐；头部七字段块按模板，不强制 ` * ` 对齐；
+  - 普通多行说明用 `/* ... */`，每行以 ` * ` 对齐；函数体内八字段头按模板，不强制 ` * ` 对齐；
     不要嵌套块注释。
   - 中文注释用中文标点；代码区仍用半角。注释里的示例 SQL 也按本规范排版。
 - F-32 `MUST` 前置逗号的续行必须与首项同列，不得与子句关键字同列。
@@ -760,7 +775,8 @@ ORDER BY
       子查询；DML。
 - [ ] F-19：CTE 缩进、`),` 连接、未写 `MATERIALIZED`。
 - [ ] F-20：`CASE` 的 `WHEN`/`ELSE`/`END`，以及 PL/pgSQL 的 `END CASE;`。
-- [ ] F-21~F-26：函数头、`DECLARE`/`BEGIN`/`EXCEPTION`、`$function$` 标签与空行。
+- [ ] F-21、F-36~F-41：函数头位置、八字段、名称、输入、输出、增量、日期与分隔线。
+- [ ] F-22~F-26：`CREATE` 头、`DECLARE`/`BEGIN`/`EXCEPTION`、`$function$` 标签与空行。
 - [ ] F-27~F-28：动态 SQL 的 `format`/`%I`/`%L`、`USING`、字符串内无 `--`。
 - [ ] F-29：长表达式换行；未拆字符串、引号标识符、`::type`、`BETWEEN ... AND ...`。
 - [ ] F-30/F-31：注释未重排；无真实人名、联系方式、内网地址、账号或连接串。

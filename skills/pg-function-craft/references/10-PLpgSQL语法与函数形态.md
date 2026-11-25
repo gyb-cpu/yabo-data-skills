@@ -288,20 +288,26 @@ GP 的 `EXECUTE ON MASTER` / `ALL SEGMENTS` 还有额外限制：函数必须是
 ### PLS-11 `MUST` `SECURITY DEFINER` 采用可审计的语法形态
 
 ```sql
--- *name : f_secure
--- *function : 按主键读取并校验权限
--- *input : 1:主键
--- *output : 1:命中行数
--- *author : <team>
--- *CreateDate : 2026-01-01
--- *UpdateDate : 2026-01-01
 CREATE OR REPLACE FUNCTION demo.f_secure(p_id bigint)
 RETURNS bigint
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, demo, pg_temp
 AS $function$
-...
+/*****************************************************************
+*name       : demo.f_secure
+*function   : 演示函数
+*input      : p_id 主键
+*output     : -1参数异常, 0正常
+*increment  : 不适用
+*author     : <team>
+*CreateDate : 2026-01-01
+*UpdateDate : 2026-01-01
+******************************************************************/
+
+BEGIN
+    RETURN 0;
+END;
 $function$;
 ```
 
@@ -638,17 +644,20 @@ END;
 ### PLS-37 `MUST` 触发器函数声明为 `RETURNS trigger`，返回值按时机区分
 
 ```sql
--- *name : f_trg_touch
--- *function : 更新行时刷新时间戳
--- *input : 无
--- *output : NEW
--- *author : <team>
--- *CreateDate : 2026-01-01
--- *UpdateDate : 2026-01-01
 CREATE OR REPLACE FUNCTION demo.f_trg_touch()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $function$
+/*****************************************************************
+*name       : demo.f_trg_touch
+*function   : 演示函数
+*input      : 无
+*output     : NEW
+*increment  : 不适用
+*author     : <team>
+*CreateDate : 2026-01-01
+*UpdateDate : 2026-01-01
+******************************************************************/
 BEGIN
     NEW.updated_at := now();
     RETURN NEW;
