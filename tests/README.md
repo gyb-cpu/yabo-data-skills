@@ -24,7 +24,7 @@ python -m unittest tests.test_reference_consistency_red -v
 | 文件 | 锁定内容 |
 |---|---|
 | `test_reference_consistency_red.py` | `references/00`–`11` 之间的口径一致：冲突优先级只在 `00` 定义一次、`search_path` 写法统一、返回码契约不越界套用、`*author` 不写真实个人 |
-| `test_release_contract_red.py` | `SKILL.md` 的 semver frontmatter 与 `CHANGELOG.md` 存在性，且 `verify_offline.py` 校验版本契约 |
+| `test_release_contract_red.py` | 两个 `SKILL.md` 的 semver、`CHANGELOG.md` 契约、README 技能表版本同步，以及 `verify_offline.py` 的版本检查 |
 | `test_structure_deploy_red.py` | 安装形态：必备目录齐全、文档内引用可解析、`description`/目录名/`name` 三者一致 |
 | `test_sql_output_rules_red.py` | `check_sql_output.py` 的 `F-06`/`F-12`/`F-21`/`REV-M02`/`PERF-29` 判定与退出码 |
 | `test_rewrite_minimal_change.py` | 改写纪律：最小改动、保留导出形态（引号标识符、`pg_catalog.int2`、`$BODY$`）、保留原署名 |

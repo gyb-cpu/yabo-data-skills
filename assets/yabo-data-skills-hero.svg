@@ -44,9 +44,9 @@
   <line x1="66" y1="352" x2="894" y2="352" stroke="#17130E" stroke-opacity=".55" stroke-width="2"/>
 
   <text x="66" y="410" fill="#2A241C" font-family="Inter, Microsoft YaHei, Segoe UI, sans-serif" font-size="33" font-weight="600">可复用的 Agent Skills 集合</text>
-  <text x="66" y="448" fill="#7B7166" font-family="Inter, Microsoft YaHei, Segoe UI, sans-serif" font-size="19">PostgreSQL 函数工程 · 申能 DWD 开发流程 · 回归用例 90 项</text>
+  <text x="66" y="448" fill="#7B7166" font-family="Inter, Microsoft YaHei, Segoe UI, sans-serif" font-size="19">PostgreSQL 函数工程 · 申能 DWD 开发流程 · 回归用例 131 项</text>
 
-  <text x="66" y="516" fill="#8A7F73" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.4">PG-FUNCTION-CRAFT 0.4.4   /   SHENERGY-DWD-DEVELOPMENT 0.0.5</text>
+  <text x="66" y="516" fill="#8A7F73" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13" letter-spacing="1.4">PG-FUNCTION-CRAFT 0.4.4   /   SHENERGY-DWD-DEVELOPMENT 0.0.6</text>
   <text x="66" y="544" fill="#9A8E80" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="12" letter-spacing="1.8">SKILLS · REFERENCES · TESTS · ASSETS</text>
 
   <g filter="url(#sheet)">
@@ -69,7 +69,7 @@
 
   <text x="1026" y="312" fill="#17130E" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="600">shenergy-dwd-development</text>
   <text x="1026" y="338" fill="#7B7166" font-family="Inter, Microsoft YaHei, Segoe UI, sans-serif" font-size="14">申能各省份 DWD 开发流程</text>
-  <text x="1490" y="312" text-anchor="end" fill="#5F5549" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="14">0.0.5</text>
+  <text x="1490" y="312" text-anchor="end" fill="#5F5549" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="14">0.0.6</text>
 
   <line x1="1026" y1="366" x2="1490" y2="366" stroke="#17130E" stroke-opacity=".14"/>
   <circle cx="1036" cy="396" r="9" fill="none" stroke="#6F8369" stroke-width="1.6"/>
@@ -79,7 +79,7 @@
   <g>
     <rect x="1310" y="456" width="204" height="72" rx="8" fill="#17130E"/>
     <text x="1332" y="486" fill="#B7AB9B" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" letter-spacing="1.8">PYTEST</text>
-    <text x="1332" y="514" fill="#F4EBDE" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">90 passed</text>
+    <text x="1332" y="514" fill="#F4EBDE" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="22" font-weight="700">131 passed</text>
   </g>
 
   <text x="1536" y="562" text-anchor="end" fill="#9A8E80" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" letter-spacing="2.4">YABO DATA SKILLS / HERO</text>
