@@ -9,7 +9,7 @@
 | Skill | 版本 | 适用任务 | 依赖 |
 |---|---:|---|---|
 | `pg-function-craft` | 0.5.0 | 生成、改写、审查 PostgreSQL / Greenplum 函数、存储过程和触发器函数 | Python 3.10+，只做离线静态检查 |
-| `shenergy-dwd-development` | 0.1.0 | 按省份、业态开展申能 DWD 口径、探源、DDL、计算、验收和交接 | 同时安装 `pg-function-craft`；按任务需要访问建表工匠、源库和目标库 |
+| `shenergy-dwd-development` | 0.1.1 | 按省份、业态开展申能 DWD 口径、探源、DDL、计算、验收和交接 | 同时安装 `pg-function-craft`；按任务需要访问建表工匠、源库和目标库 |
 
 如果只处理 SQL 函数，安装 `pg-function-craft` 即可。要做申能 DWD 开发，两个技能都要安装；`shenergy-dwd-development` 负责业务流程和证据，`pg-function-craft` 负责函数工程与静态检查。
 

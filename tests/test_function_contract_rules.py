@@ -147,6 +147,14 @@ class FunctionContractRules(unittest.TestCase):
         """§4 DDL 不得因平台条目不同而更换既有列名。"""
         self.assertIn("既有对象的列名不因平台条目不同而更换", self.flow)
 
+    def test_extension_fields_not_inserted_by_calculation_script(self):
+        """扩展字段只用于 DDL 预留，不进入计算脚本。"""
+        self.assertIn("2.9 扩展字段不进入计算脚本", self.func)
+        self.assertIn("不进入计算脚本的 `INSERT` 或 `SELECT`", self.skill)
+        self.assertIn("计算脚本列清单与目标表业务列集合的差集不包含", self.flow)
+        self.assertIn("ext_1..ext_10", self.flow)
+        self.assertIn("扩展字段只作为 DDL 预留列", self.flow)
+
     def test_version_matches_newest_changelog(self):
         """SKILL.md 版本号必须等于 CHANGELOG 最新条目。"""
         changelog = (SKILL_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
