@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1 — 2026-11-26
+
+明确计算脚本不写入预留扩展字段。
+
+- `SKILL.md`、`references/04-固定风格.md`、`references/09-工程与函数结构规范.md` 与 `README.md` 同步：`ext_1`–`ext_10` 只属于 DDL/平台层，不进入计算函数的 `INSERT`/`SELECT`/字段映射，也不生成 `NULL` 占位。
+- 新增 `ENG-31` 规则及交付前检查项，避免为了列数对齐写入无业务来源的扩展字段。
+
 ## 0.5.0 — 2026-11-25
 
 统一函数头的可导出格式：头部必须位于 `AS $function$` 之后、`DECLARE`/`BEGIN` 之前，不能再只放在 `CREATE` 前。

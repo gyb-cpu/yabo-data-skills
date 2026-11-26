@@ -140,6 +140,25 @@ class ReferenceConsistencyTest(unittest.TestCase):
         self.assertIn("10-PLpgSQL语法与函数形态.md", review)
         self.assertIn("§1.1", review)
 
+    def test_reserved_extension_columns_stay_out_of_calculation_script(self):
+        style = read(REFS / "04-固定风格.md")
+        engineering = read(REFS / "09-工程与函数结构规范.md")
+        skill = read(SKILL_MD)
+        for text, label in (
+            (style, "04"),
+            (engineering, "09"),
+            (skill, "SKILL"),
+        ):
+            with self.subTest(document=label):
+                self.assertIn("ext_1", text)
+                self.assertIn("ext_10", text)
+                self.assertIn("INSERT", text)
+                self.assertIn("SELECT", text)
+        self.assertIn("计算函数不得把它们写入", style)
+        self.assertIn("ENG-31", engineering)
+        self.assertIn("不得进入计算函数", engineering)
+        self.assertIn("不进入计算脚本", skill)
+
     def test_complete_function_examples_satisfy_header_rule(self):
         fields = (
             "*name",

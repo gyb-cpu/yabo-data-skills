@@ -17,7 +17,7 @@ python -m unittest discover -s tests -p "test_*.py" -v
 python -m unittest tests.test_reference_consistency_red -v
 ```
 
-当前基线：`143 passed`（Python 3.12）。
+当前基线：`144 passed`（Python 3.12）。
 
 ## 各文件职责
 
