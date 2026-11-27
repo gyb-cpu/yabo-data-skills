@@ -104,12 +104,13 @@
 
 - [ ] SQL 输出：`python scripts/check_sql_output.py --json <file.sql>`。JSON 含
       `ok`、`database_connected: false` 与 `violations`（`rule` / `line` / `message`）；
-      至少覆盖 `F-06`、`F-12`、`F-21`、`F-36`～`F-41`、`STYLE-01`、`PERF-29`、`INC-05`；并包含 `violation_count` 与实际命令。
+      覆盖 `F-06`、`F-12`、`F-21`、`F-32`～`F-41`（`F-40` 支持 `*UpdateDate` 逗号追加或多行追加）、`STYLE-01`（仅函数）、`PERF-29`（仅过滤/比较上下文）、`INC-05`、`INC-07`（禁止在 `update_time` 变更日期推导中过滤 `deleted = 0`/`is_deleted = 0`）、`REV-S01`～`REV-S04`、`REV-C01`，并支持单文件多函数/过程逐个检查；输出包含 `violation_count` 与实际命令。
+- [ ] 默认目标基线为原生 PostgreSQL 12+；仅当显式指定 GP 6.6 或 PG 9.4 时按低版本门槛核对。
 - [ ] 仓库书面约定用尾逗号时，加 `--comma-style trailing`；否则 `F-12` 会按前置逗号误报。
       `CREATE INDEX ... ((col::date))` 属于表达式索引，不报 `PERF-29`。
 - [ ] 模式输出：`python scripts/verify_output_contract.py --mode generate --file <output.md> --json`。
       按 `SKILL.md`「输出契约」校验段落缺失（`OUT-SEQ-01`）、顺序（`OUT-SEQ-02`）、
-      证据标签（`OUT-LABEL-01`）与未实测断言（`OUT-EVID-01`）。
+      证据标签（`OUT-LABEL-01`）与未实测断言（`OUT-EVID-01`，豁免代码围栏、反引号引用与否定句式）。
 - [ ] 非法模式（`generate` / `rewrite` / `review` 之外）按用法错误返回 `2`。
 
 ## 9. 增量更新场景
@@ -120,11 +121,11 @@
 - [ ] 回看窗是参数或配置，不是一个散落的 `CURRENT_DATE - INTERVAL 'N days'` 常量。
 - [ ] 回看条件有上界：`update_time >= v_lookback AND update_time < v_batch_ts`；上界取一次，
       使用 `clock_timestamp()` 而不是 `now()`。
-- [ ] 业务日期区间由 `min/max` 从变更行推导，空结果用 `IS NULL` 判断，没有 `2099-01-01`
+- [ ] 稀疏增量优先用 `array_agg(DISTINCT ...)` 收集 `v_changed_dates date[]`（`min/max` 仅用于连续区间/显式回溯），空结果用 `IS NULL` 判断，没有 `2099-01-01`
       一类哨兵日期。
-- [ ] `DELETE` 的日期条件与 `INSERT ... SELECT` 的条件来自同一对变量，没有一边用推导值、
+- [ ] `DELETE` 的日期条件与 `INSERT ... SELECT` 的条件来自同一集合或同一对变量，没有一边用推导值、
       一边用原始参数。
-- [ ] 源表有 `deleted` 列时，逻辑删除条件同时写进推导与抽取；契约里声明物理删除不捕获，
+- [ ] 源表有 `deleted` 列时，变更日期推导查询不过滤 `deleted = 0`，`AND a.deleted = 0` 只写在 `INSERT ... SELECT` 抽取中；契约或审查报告里声明物理删除不捕获，
       并给出全量对账兜底。
 - [ ] 落表是按业务区间覆盖而不是追加；回看窗重叠时结果仍幂等。
 - [ ] `update_time` 的维护方式（默认值、触发器或显式写入）与时钟源已确认；不成立时降级为

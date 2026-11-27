@@ -282,8 +282,8 @@ WHERE
   - CTE 体缩进 4；结束 `)` 与 `WITH`/CTE 名同列；多个 CTE 用 `),` 连接，最后一个 `)` 后
     空一行再写主查询（可选，但同一文件要一致）。
   - 递归 CTE 写 `WITH RECURSIVE`；`RECURSIVE` 大写。
-  - GP 6.6 的 CTE 恒物化，不要写 `MATERIALIZED` / `NOT MATERIALIZED`（PG 12 语法，GP 6.6
-    不支持）。
+  - 原生 PG 12+ 支持 `MATERIALIZED` / `NOT MATERIALIZED`；仅当目标显式声明为 GP 6.6 / PG 9.4 时
+    不写该修饰符（GP 6.6 / PG 9.4 的 CTE 恒物化，不支持该语法）。
 
 ```sql
 WITH base AS (
@@ -313,7 +313,7 @@ FROM
 
 - CTE 之间的逗号固定在 `)` 后（`),`），不适用列表的前置逗号约定；前置逗号只用于列/值列表
   和函数参数。若工具把 CTE 逗号移到下一行行首，属等价排版，选一种并全文件统一。
-- 把长查询拆成 CTE 是**结构变更**：CTE 可能改变优化器行为（GP 6.6 尤其明显）。不要以
+- 把长查询拆成 CTE 是**结构变更**：CTE 可能改变优化器行为（PG 12+ 对单次引用的非递归 CTE 默认内联，而 GP 6.6 与 PG 9.4 恒物化）。不要以
   “排版”为名拆 CTE；拆之前按 §10 和 `05-重写协议.md` 评估。
 
 ## 5. CASE
@@ -350,7 +350,7 @@ END AS status_desc
   `-1参数异常, >=0影响行数`，不能写 `0正常`。
 - F-39 `MUST` 使用 `update_time`、`v_changed_dates` 或 `v_changed_months` 的增量函数必须说明
   水位线、回看窗口和半开区间；非增量函数写 `不适用`。
-- F-40 `MUST` `*CreateDate` / `*UpdateDate` 使用 `YYYY-MM-DD`。
+- F-40 `MUST` `*CreateDate` 使用 `YYYY-MM-DD`；`*UpdateDate` 使用 `YYYY-MM-DD`，修改已有函数时可在同一行用逗号追加日期（`YYYY-MM-DD, YYYY-MM-DD`）或追加新的 `*UpdateDate` 行，不覆盖历史修改日期。
 - F-41 `MUST` 函数头必须有 `/*****` 起始分隔线和 `*****/` 结束分隔线。
 - `*author` 写项目允许的署名或明确占位符；不得把真实人名、手机号、
   邮箱、内网地址、账号、连接串写进注释。
@@ -471,7 +471,7 @@ END;
 
 - F-26 `MUST` 新代码的函数体默认用 `$function$`。从 `pg_get_functiondef` 导出的既有函数常见
   `$BODY$`，**保留原标签**，不要为统一而改；同一对象内成对即可。不要混用 `$$`，迁移时单独批准。
-  过程（`[11+]`）可用 `$procedure$` 区分。
+  过程（PG 11+，默认 PG 12+ 基线可用）可用 `$procedure$` 区分。
 - 函数体内出现与正文冲突的同名标签（例如动态 SQL 里再用 `$function$`）时，改用 `$fn$` 或
   `$sql$`，并保持同一函数内标签成对、大小写一致。
 - `AS $function$` 与结尾 `$function$;` 顶格。导出文本的标签不作为个人风格证据：换库或换
@@ -538,8 +538,9 @@ WHERE
 ## 9. 注释
 
 - F-30 `MUST`
-  - 文件/函数头按仓库模板：本技能 `README.md` 用 `--` 行块，字段行以 `*name` 顶格；导出件
-    常用 `/* ... */` 顶格块。两种都可用，但同一仓库不要混用。
+  - 函数头按 `F-21` 放置在 `AS $function$`（或导出件 `AS $BODY$`）之后、`DECLARE`/`BEGIN` 之前，
+    使用独立的 `/***** ... *****/` 八字段块注释；`README.md` 速查表与本规范一致，不再使用
+    仅写在 `CREATE` 之前的 `--` 行块头。
   - 段注释 `-- 1. 说明` 与当前语句同列；行尾注释与代码之间至少 2 个空格，`--` 后 1 个空格。
   - 普通多行说明用 `/* ... */`，每行以 ` * ` 对齐；函数体内八字段头按模板，不强制 ` * ` 对齐；
     不要嵌套块注释。
@@ -620,7 +621,7 @@ pgFormatter、SQLFluff、sql-formatter 都是文本工具，不是数据库客�
 
 ### 11.2 SQLFluff
 
-- 方言用 `postgres` 或 `greenplum`；GP 6.6 优先 `greenplum`，但不要假设它覆盖 6.6 的全部
+- 默认方言用 `postgres`；仅当目标显式声明为 GP 6.6 时切换为 `greenplum`，且不要假设它覆盖 GP 6.6 的全部
   语法。
 - 固定版本与 `.sqlfluff` 配置，先 `sqlfluff lint` 再 `sqlfluff fix`；CI 只检查本次变更的文件，
   避免历史文件全量报错。
@@ -652,7 +653,7 @@ pgFormatter、SQLFluff、sql-formatter 都是文本工具，不是数据库客�
 
 ```ini
 [sqlfluff]
-dialect = greenplum
+dialect = postgres
 templater = raw
 max_line_length = 100
 
@@ -664,7 +665,7 @@ tab_space_size = 4
 line_position = leading
 ```
 
-- 纯 PostgreSQL 把 `dialect` 改为 `postgres`。关键字大写与逗号位置的配置段名随版本变化，
+- 目标显式声明为 Greenplum 6.6 时把 `dialect` 改为 `greenplum`。关键字大写与逗号位置的配置段名随版本变化，
   按所装版本的文档核对，不要盲目复制旧配置。
 
 `.sql-formatter.json`（仅用于临时查询；不要用于函数文件或最终排版）：
@@ -691,11 +692,13 @@ pg_format -s 4 -u 2 -f 1 -U 1 -b \
 - 本技能默认前置逗号。仓库书面约定用尾逗号时，检查器必须加 `--comma-style trailing`，
   否则 `F-12` 会误报（见 `tests/README.md` §8）。
 
-## 12. Greenplum 6.6 兼容提醒
+## 12. Greenplum 6.6 兼容提醒（按需启用）
 
-- GP 6.6 核心基于 PostgreSQL 9.4。不要引入 9.5+ 语法；**具体特性与最低版本只查
+仅当目标显式声明为 GP 6.6 时适用，原生 PG 12+ 默认不启用以下降级约束：
+
+- GP 6.6 核心基于 PostgreSQL 9.4。目标为 GP 6.6 时不要引入 PG 9.5+ 语法；**具体特性与最低版本只查
   `10-PLpgSQL语法与函数形态.md` §1.1**，本节不维护清单。格式化工具可能接受高版本语法，
-  但目标库不会。
+  但 GP 目标库不会。
 - GP 专属子句单独成行，按目标版本顺序保留：`DISTRIBUTED BY (...)`、`DISTRIBUTED RANDOMLY`、
   `PARTITION BY ...`、`WITH (appendonly=true, orientation=column)`。不要让工具把它们挪到
   `SELECT` 之后或删掉。
@@ -773,7 +776,7 @@ ORDER BY
 - [ ] F-12：前置逗号一致；函数参数、`IN` 列表、`VALUES` 未混用尾逗号。
 - [ ] F-11、F-13~F-18：子句分行；`JOIN`/`ON`；`WHERE`；`GROUP BY`/`ORDER BY`；集合运算；
       子查询；DML。
-- [ ] F-19：CTE 缩进、`),` 连接、未写 `MATERIALIZED`。
+- [ ] F-19：CTE 缩进、`),` 连接；仅当显式声明 GP 6.6 / PG 9.4 时未写 `MATERIALIZED`。
 - [ ] F-20：`CASE` 的 `WHEN`/`ELSE`/`END`，以及 PL/pgSQL 的 `END CASE;`。
 - [ ] F-21、F-36~F-41：函数头位置、八字段、名称、输入、输出、增量、日期与分隔线。
 - [ ] F-22~F-26：`CREATE` 头、`DECLARE`/`BEGIN`/`EXCEPTION`、`$function$` 标签与空行。
@@ -781,7 +784,7 @@ ORDER BY
 - [ ] F-29：长表达式换行；未拆字符串、引号标识符、`::type`、`BETWEEN ... AND ...`。
 - [ ] F-30/F-31：注释未重排；无真实人名、联系方式、内网地址、账号或连接串。
 - [ ] `git diff -w` 后仅空白变化；token、括号分组、谓词位置、连接类型未变。
-- [ ] 目标为 GP 6.6 时，未引入 9.5+ 语法；GP 子句未被工具挪动。
+- [ ] 若目标显式声明为 GP 6.6，未引入 PG 9.5+ 语法；GP 子句未被工具挪动。
 - [ ] 未对用户提供的只读样例跑原地格式化。
 - [ ] 未把格式化通过当作正确性、权限安全或性能证明。
 

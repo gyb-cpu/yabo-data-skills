@@ -1,6 +1,6 @@
 ---
 name: pg-function-craft
-version: 0.5.1
+version: 0.7.0
 description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储过程或触发器函数时使用；固定使用已脱敏的通用风格，关注 f_/p_/v_ 命名、函数体内中文八字段头、前置逗号、集合式 SQL、临时表物化理由、日期谓词、默认 SECURITY INVOKER、动态 SQL 绑定与静态性能风险。不连接数据库，不执行 EXPLAIN。
 ---
 
@@ -14,6 +14,23 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 | `generate` | 用户要求新写一个 PostgreSQL 函数 | 假设与缺失输入 → SQL + 静态验证方案 + 自检 |
 | `rewrite` | 用户要求让已有函数符合固定风格 | unified diff + 行为等价说明 |
 | `review` | 用户询问函数是否安全、性能是否可靠、写法是否一致 | 分级问题清单，附行号证据 |
+
+## 调用上下文（Profile）
+
+上游业务 SOP 技能或项目调用本技能时，可在提示词或交接上下文中显式附带以下结构化 Profile；未提供时默认按 **原生 PostgreSQL 12+（`pg12+`）** 基线执行（仅当显式声明 `gp6.6` 或 `pg9.4` 时启用对应兼容约束）：
+
+```yaml
+target_engine: pg12+                 # 默认：pg12+；可选：pg14 | pg16 | gp6.6 | pg9.4
+return_contract: row_count           # 可选：status_code | row_count
+comma_style: leading                 # 可选：leading | trailing
+project_overrides: []                # 可选：显式覆盖的 L4 默认规则编号，如 [ENG-11, ENG-26]
+```
+
+裁决规则（与 `references/00-风格与边界.md` 第 6 节冲突优先级对齐）：
+
+- **默认基线与显式引擎宣言**：默认按原生 PostgreSQL 12+（`pg12+`）生成或审查，默认不套用 Greenplum 6.6 / PG 9.4 降级约束；PG 13+ 特性（如 `MERGE`、`EXPLAIN (WAL)`、`total_exec_time`）按版本门槛控制；仅当 `target_engine` 显式声明 `gp6.6` 或 `pg9.4` 时启用 `REV-D04`、`PERF-26`、`PERF-46` 及 `07`/`10` 中的 GP 专章与 9.4 交集限制。
+- **`project_overrides` 对应第 2 层「项目已确认的书面约定」**：只允许覆盖第 4 层工程或风格默认值（如 `ENG-11`、`ENG-26`、`STYLE-01` 或 `return_contract: row_count`），**不得降低第 1 层（`01-基线规范.md`、`02-反模式.md`）的安全与正确性底线**。
+- **与上游 SOP 协同**：直接消费上游交付的脱敏表级 Spec 与字段映射，不读取连接凭据、`.env` 或平台原始导出。
 
 **先读 `references/00-风格与边界.md`。** 它定义本技能的使用边界：不携带语料、个人风格资料与元数据；
 不连接数据库；性能分析止于静态 SQL；临时表必须有物化理由；日期过滤不对列做不必要的
@@ -47,7 +64,6 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 - 生产约定格式的日期参数只做必要转换与开始日期不晚于结束日期检查；保留稀疏增量必需的 `v_changed_dates date[]`。
 - 每张临时表上方写明数据类型、物化理由/复用位置和生命周期；无指标文档依据的备用源必须从增量、临时表、驱动键和注释中整链删除。
 - 合同基础信息按交易单元与合同有效期关联；宽表 `INSERT` 的目标列和 `SELECT` 列逐列写字段注释。
-- `ext_1`–`ext_10` 等预留扩展列只属于 DDL/平台层，不进入计算脚本的 `INSERT`、`SELECT` 或字段映射。
 
 ## 不可让步的边界
 
@@ -100,8 +116,8 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
    `references/01-基线规范.md`；权限、`search_path`、事务边界与错误契约读
    `references/09-工程与函数结构规范.md`；PL/pgSQL 语法可用性、游标、动态 SQL 与触发器形态
    读 `references/10-PLpgSQL语法与函数形态.md`。
-3. 先按 `references/10-PLpgSQL语法与函数形态.md` 的版本门槛确认目标引擎（PG 9.4 / GP 6.6）
-   支持所需语法；9.5+ 特性默认不写进通用模板。
+3. 先按 `references/10-PLpgSQL语法与函数形态.md` 的版本门槛确认目标引擎（默认原生 PostgreSQL 12+）
+   支持所需语法；13+ 特性默认标注版本门槛，仅显式声明目标为 GP 6.6 / PG 9.4 时按降级交集处理。
 4. 优先用集合式 SQL；但当副作用、隔离、分块处理或按行分支确实有必要时，不要机械地把循环改掉。
 5. ETL 先输出读取/物化路径表：函数、执行模式、源表、业务粒度、过滤窗口、关联/聚合、物化点与写入目标。
 6. 按 `references/07-性能优化规则.md` 的 `PERF-47`～`PERF-54` 检查稀疏变更集合、同源窗口复用、主备源短路、单次物化、低粒度公共关联、驱动键覆盖、目标粒度前置展开和合同派生过滤下推；按 `INC-15` 对照驱动源与增量日期推导源清单。
@@ -156,8 +172,8 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 
 交付前可运行两个离线启发式检查器：
 
-- `python scripts/check_sql_output.py --json <file.sql>`：检查 `F-06`、`F-12`、`F-21`、`F-36`～`F-41`、`REV-M02`、`PERF-29` 等可机器判定规则；
-- `python scripts/verify_output_contract.py --mode <generate|rewrite|review> --file <output.md> --json`：检查模式段落、顺序、证据标签和未实测性能断言。
+- `python scripts/check_sql_output.py --json <file.sql>`：检查 `F-06`、`F-12`、`F-21`、`F-32`～`F-41`（`F-40` 支持 `*UpdateDate` 逗号追加或多行追加）、`STYLE-01`（仅函数）、`PERF-29`（仅过滤/比较上下文）、`INC-05`、`REV-S01`～`REV-S04`、`REV-C01`、`INC-07`（禁止在 `update_time` 变更日期推导中过滤 `deleted = 0`/`is_deleted = 0`），并支持单文件内多个函数/过程定义逐个检查；
+- `python scripts/verify_output_contract.py --mode <generate|rewrite|review> --file <output.md> --json`：检查模式段落、顺序、证据标签和未实测性能断言（豁免代码围栏、反引号引用与否定句式）。
 
 两个检查器只使用 Python 标准库，不连接数据库、不访问网络、不执行 SQL。它们是离线启发式检查器，不是完整 SQL 解析器，也不产生执行计划或真实性能结论。退出码统一为 `0`（通过）、`1`（发现问题）、`2`（用法或读取错误）。
 
@@ -182,7 +198,7 @@ description: 当用户需要生成、改写或审查 PostgreSQL 函数、存储�
 | 固定风格：命名、函数体内八字段头、排版、结构、集合式、日期、安全、动态 SQL | `references/04-固定风格.md` |
 | 重写契约、diff 纪律或行为等价检查 | `references/05-重写协议.md` |
 | 缩进、换行、对齐、大小写与注释的排版规则 | `references/06-SQL排版规范.md` |
-| 索引、统计、锁、批量写入、分页、临时表与 GP 6.6 差异 | `references/07-性能优化规则.md` |
+| 索引、统计、锁、批量写入、分页、临时表与可选 GP 6.6 方言差异 | `references/07-性能优化规则.md` |
 | 审查级别、问题表、`REV-*` 规则与版本门槛速查 | `references/08-PostgreSQL审查规则.md` |
 | 权限、`search_path`、事务边界、错误契约、临时表与迁移 | `references/09-工程与函数结构规范.md` |
 | PL/pgSQL 语法可用性、游标、动态 SQL、触发器与过程 | `references/10-PLpgSQL语法与函数形态.md` |

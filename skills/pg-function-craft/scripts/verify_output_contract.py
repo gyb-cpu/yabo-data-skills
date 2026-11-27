@@ -10,7 +10,7 @@
   OUT-SEQ-01   缺少契约段落（每个缺失段落一条）；
   OUT-SEQ-02   段落出现顺序与契约不一致；
   OUT-LABEL-01 风险/性能段落中的要点行缺少五档证据标签之一；
-  OUT-EVID-01  出现未实测的性能断言（反引号内的引用不算）。
+  OUT-EVID-01  出现未实测的性能断言（反引号、代码围栏与否定禁止语境除外）。
 
 段落识别只看标题行：去掉行首空白后以 `#` 或 `【` 开头的行；代码围栏内的行不参与识别。
 每个标题按契约顺序匹配关键词，首个命中的段落规格生效。
@@ -40,6 +40,13 @@ EVIDENCE_LABELS = (
 )
 
 UNVERIFIED_CLAIMS = ("更快", "实测通过", "已验证", "性能已确认")
+
+CLAIM_PATTERN = re.compile("|".join(re.escape(c) for c in UNVERIFIED_CLAIMS))
+CLAUSE_SPLIT = re.compile(r"[，。；,;]")
+NEGATION_CUES = re.compile(
+    r"(?:不声称|不代表|不等于|不保证|不要写|不可写|不能|不得|不是|"
+    r"并未|并非|无法|没有|尚未|无证据|未确认|禁止|切勿|严禁|勿写|不|未(?!来))"
+)
 
 # (段落名, 关键词)；关键词按小写比较，标题里出现任一即命中。
 CONTRACTS = {
@@ -111,12 +118,14 @@ def _match_section(title: str, contract) -> int | None:
     return None
 
 
-def _section_body(text: str, headings: list[tuple[int, str]], position: int) -> list[tuple[int, str]]:
-    start = headings[position][0] + 1
-    end = headings[position + 1][0] if position + 1 < len(headings) else None
+def _section_body(
+    text: str, headings: list[tuple[int, str]], position: int
+) -> list[tuple[int, str]]:
     lines = text.splitlines()
+    start = headings[position][0] + 1
+    end = headings[position + 1][0] if position + 1 < len(headings) else len(lines) + 1
     body = []
-    for number in range(start, (end - 1) if end else len(lines)):
+    for number in range(start, end):
         if 1 <= number <= len(lines):
             body.append((number, lines[number - 1]))
     return body
@@ -196,19 +205,28 @@ def check_output(mode: str, text: str) -> dict:
                 )
             )
 
+    in_fence = False
     for number, raw in enumerate(text.splitlines(), start=1):
-        cleaned = INLINE_CODE.sub("", raw)
-        hit = next((claim for claim in UNVERIFIED_CLAIMS if claim in cleaned), None)
-        if hit is None:
+        if FENCE.match(raw):
+            in_fence = not in_fence
             continue
-        findings.append(
-            _finding(
-                "OUT-EVID-01",
-                f"出现未实测的性能断言“{hit}”；只能标注 "
-                f"{' / '.join(EVIDENCE_LABELS)}",
-                number,
+        if in_fence:
+            continue
+        cleaned = INLINE_CODE.sub("", raw)
+        for claim_match in CLAIM_PATTERN.finditer(cleaned):
+            clause_prefix = CLAUSE_SPLIT.split(cleaned[: claim_match.start()])[-1]
+            window = clause_prefix[-15:]
+            if NEGATION_CUES.search(window):
+                continue
+            findings.append(
+                _finding(
+                    "OUT-EVID-01",
+                    f"出现未实测的性能断言“{claim_match.group(0)}”；只能标注 "
+                    f"{' / '.join(EVIDENCE_LABELS)}",
+                    number,
+                )
             )
-        )
+            break
 
     return {"ok": not any(f["level"] == "error" for f in findings),
             "mode": mode, "findings": findings}

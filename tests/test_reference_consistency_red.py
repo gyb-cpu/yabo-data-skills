@@ -140,24 +140,37 @@ class ReferenceConsistencyTest(unittest.TestCase):
         self.assertIn("10-PLpgSQL语法与函数形态.md", review)
         self.assertIn("§1.1", review)
 
-    def test_reserved_extension_columns_stay_out_of_calculation_script(self):
-        style = read(REFS / "04-固定风格.md")
-        engineering = read(REFS / "09-工程与函数结构规范.md")
-        skill = read(SKILL_MD)
-        for text, label in (
-            (style, "04"),
-            (engineering, "09"),
-            (skill, "SKILL"),
+    def test_pg_skill_is_de_shenergized_and_defaults_to_pg12_plus(self):
+        for rel in (
+            "04-固定风格.md",
+            "08-PostgreSQL审查规则.md",
+            "09-工程与函数结构规范.md",
         ):
-            with self.subTest(document=label):
-                self.assertIn("ext_1", text)
-                self.assertIn("ext_10", text)
-                self.assertIn("INSERT", text)
-                self.assertIn("SELECT", text)
-        self.assertIn("计算函数不得把它们写入", style)
-        self.assertIn("ENG-31", engineering)
-        self.assertIn("不得进入计算函数", engineering)
-        self.assertIn("不进入计算脚本", skill)
+            text = read(REFS / rel)
+            with self.subTest(clean_doc=rel):
+                for term in ("ext_1", "ext_10", "ENG-31", "REV-M14"):
+                    self.assertNotIn(term, text)
+        for path, label in ((SKILL_MD, "SKILL"), (SKILL_README, "README")):
+            text = read(path)
+            with self.subTest(clean_doc=label):
+                for term in ("ext_1", "ext_10", "ENG-31", "REV-M14"):
+                    self.assertNotIn(term, text)
+
+        for rel in (
+            "00-风格与边界.md",
+            "01-基线规范.md",
+            "04-固定风格.md",
+            "05-重写协议.md",
+            "07-性能优化规则.md",
+            "08-PostgreSQL审查规则.md",
+            "09-工程与函数结构规范.md",
+            "10-PLpgSQL语法与函数形态.md",
+        ):
+            with self.subTest(pg12_doc=rel):
+                self.assertIn("原生 PostgreSQL 12+", read(REFS / rel))
+        for path, label in ((SKILL_MD, "SKILL"), (SKILL_README, "README")):
+            with self.subTest(pg12_doc=label):
+                self.assertIn("原生 PostgreSQL 12+", read(path))
 
     def test_complete_function_examples_satisfy_header_rule(self):
         fields = (

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.0 — 2026-11-27
+
+统一默认数据库基线为原生 **PostgreSQL 12+**（`pg12+`），增加「调用上下文（Profile）」机制，并与 `shenergy-dwd-development` 完成规则与检查器单一归属分工。
+
+- `SKILL.md`、`README.md` 与 `references/00`–`10`：将默认目标引擎基线统一从 PostgreSQL 9.4 / Greenplum 6.6 交集提升为原生 **PostgreSQL 12+**（`pg12+`），GP 6.6 / PG 9.4 降级为按需显式声明的可选兼容目标；PG 13+ 特性继续按版本门槛标注，PG 12 及以下已具备特性（如 `ON CONFLICT`、`CREATE PROCEDURE`、`SKIP LOCKED`、`INCLUDE`、BRIN、`[NOT] MATERIALIZED` CTE）默认放行。
+- `SKILL.md` 与 `README.md` 新增「调用上下文（Profile）」规范：支持调用方显式传入 `target_engine`（默认 `pg12+`，可选 `pg14` / `pg16` / `gp6.6` / `pg9.4`）、`return_contract`、`comma_style` 与 `project_overrides`；明确 `project_overrides` 映射到 `00-风格与边界.md` 第 6 节第 2 层，只可覆盖第 4 层工程/风格默认值，不得弱化第 1 层安全与正确性底线。
+- 单一归属去重：将申能 DWD 专属的 `ext_1`–`ext_10` 预留扩展列约束收归 `shenergy-dwd-development`（`SH-FN-04`）单独承担，从本技能 `check_sql_output.py`、`SKILL.md`、`README.md`、`references/04-固定风格.md`、`references/08-PostgreSQL审查规则.md`（移除 `REV-M14`）与 `references/09-工程与函数结构规范.md`（移除 `ENG-31`）中移除重复定义；`check_sql_output.py` 继续作为 `INC-07`（变更日期推导禁止过滤逻辑删除）等通用 PG 规则的唯一静态实现。
+
+## 0.6.0 — 2026-11-27
+
+修复文档漂移、增量模板逻辑删除/稀疏增量缺陷与检查器规则对齐。
+
+- `references/11-增量与水位线.md`：明确 `INC-04` 中 `min/max` 连续区间推导仅适用于连续区间或显式回溯，默认稀疏增量按 `INC-14` 收集 `v_changed_dates date[]`；明确 `INC-07` 中从 `update_time` 推导变更日期时禁止过滤 `deleted = 0`，`AND a.deleted = 0` 仅放在 `INSERT ... SELECT` 抽取中；重写 §16 模板 `demo.f_demo_daily_settlement_d`（`SECURITY INVOKER`、`SET search_path = ''`、完整入参校验、`v_changed_dates` 稀疏集合覆盖、`GET STACKED DIAGNOSTICS` 保留 `SQLSTATE` 重抛）。
+- `SKILL.md` 与 `tests/README.md`：「输出检查器」将 `REV-M02` 修正为 `STYLE-01`，补充 `REV-S01`～`REV-S04`、`REV-C01`、`ENG-31`、`INC-07`、单文件多函数/过程逐个检查、`F-40` `*UpdateDate` 追加格式以及 `verify_output_contract.py` 代码围栏/否定句式豁免；同步修正 `tests/README.md` §9 的稀疏增量与逻辑删除检查项。
+- `references/08-PostgreSQL审查规则.md`：将 `REV-M10`～`REV-M13` 从第 5 节移入第 6 节 `REV-M` 表，新增 `REV-M14`（对应 `ENG-31`），更新第 11 节引用范围至 `F-01`～`F-41`、`PERF-01`～`PERF-54`。
+- `references/07-性能优化规则.md`：规则总表标题更新至 `PERF-54`，将 §1.3 `PERF-54` 片段去项目化为通用占位符（`demo.dim_unit_scope`、`d.domain_type`、`d.region`），修复重复的 `## 10.` 标题并重编为 `## 11.`（`11.1`～`11.6`）与 `## 12. 参考`。
+- `references/09-工程与函数结构规范.md`：第 1 节标题更新为 `ENG-01…ENG-31`。
+- `references/06-SQL排版规范.md`：更新 `F-30` 对齐 `F-21`（移除过时的 `README.md` `--` 行块头表述）；更新 `F-40` 说明 `*UpdateDate` 支持逗号追加日期与多行追加而不覆盖历史。
+- `references/10-PLpgSQL语法与函数形态.md`：在 `PLS-43` `CREATE PROCEDURE` 片段前补充节选注释。
+- `SKILL.md` frontmatter 与 `README.md` 当前技能版本同步升至 `0.6.0`。
+
 ## 0.5.1 — 2026-11-26
 
 明确计算脚本不写入预留扩展字段。

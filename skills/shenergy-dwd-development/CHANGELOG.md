@@ -2,6 +2,49 @@
 
 申能 DWD 开发技能的版本变更记录。版本号与 `SKILL.md` frontmatter 的 `version` 保持一致。
 
+## 0.4.0 — 2026-11-27
+
+增加模式判定，把首次开发从完整 SOP 中拆出，缩短首次执行时间并固定首次产物。
+
+- `SKILL.md`：开头新增「先判定模式」，分 `bootstrap`（首次开发，目标库尚无源表）、`full`（源表已同步）、`maintenance`（存量维护）；提示词与库内实况冲突时停止报告。
+- 新增 `references/首次开发.md`：`bootstrap` 只执行 5 步（BI看口径 → 源端探查 → 建表工匠字段补录 → DDL 与 Spec → 函数初稿）；快照只读 `BI看` sheet；字段补录为必做；函数中源表必须写全限定名供平台解析血缘；限定读取范围与工作区边界（非空目录不扫描其他文件、已有省份业态目录先询问、不装依赖不写探针脚本不做 git 操作）；检查器每文件最多修 2 轮；固定产物清单与四段汇报。
+- `scripts/check_shenergy_artifacts.py`：新增 `--kind bootstrap <省份业态目录>`，规则 `SH-BOOT-01`（必备产物缺失）、`SH-BOOT-02`（清单外或 full 阶段文件）、`SH-BOOT-03`（Spec 与函数一一对应）、`SH-BOOT-04`（README 写明模式与四个汇报键）。
+- `scripts/verify_offline.py`：必备文件加入 `references/首次开发.md`。
+- `references/流程与门禁.md`、`references/产物契约.md`：注明阶段 1–9 与完整目录适用于 `full` / `maintenance`。
+
+## 0.3.0 — 2026-11-27
+
+优化与 `pg-function-craft` 的协同接口：增加阶段 4→5 结构化 Function Spec、一键双检无重叠双层门禁、可移植相对脚本路径，并与 `pg-function-craft` 统一为原生 PostgreSQL 12+（`pg12+`）默认基线及单一规则归属分工。
+
+- `scripts/check_shenergy_artifacts.py`：
+  - 新增 `--kind spec`（`SH-SPEC-01`..`05`）校验阶段 4→5 的 `<目标表名>_spec.json` 交接规格；
+  - 新增 `--spec <spec.json>` 支持：`--kind ddl` 校验目标表与全量 `insert_columns` 存在性（`SH-DDL-10`），`--kind func` 自动推断粒度与 `legacy` 状态并校验 `INSERT` 列清单顺序对齐（`SH-FN-10`）及全部 `driver` 源引用（`SH-FN-11`）；
+  - 新增 `--with-pg-checker` / `--pg-checker` / `--comma-style` 一键双检模式，自动发现并调用同级 `pg-function-craft/scripts/check_sql_output.py`；
+  - 完成单一规则归属消除重叠：`SH-FN-04` 收窄为仅检查 `INSERT` 列清单与 `SELECT` 投影（豁免 `WHERE` 过滤）并作为 `ext_1`–`ext_10` 的唯一检查实现；移除重复规则 `SH-FN-09`（逻辑删除变更日期推导统一由 `pg-function-craft` `INC-07` 检查）；清空 `OVERLAP_RULES` 并保留 `deduplicated: []` 兼容键。
+- `scripts/generate_validation_sql.py`：新增 `--spec <spec.json>`，自动读取 `target_table`、`function_name`、`business_keys`、`metric_columns`、`grain`、`date_col`、`unit_col` 与 `blood_batch`（支持 CLI 参数局部覆盖）。
+- `references/产物契约.md`、`references/函数与验收.md`、`references/流程与门禁.md`、`SKILL.md`：
+  - 将文档中写死的 `skills/.../scripts/...` 仓库路径统一改为可移植的 `scripts/...`；
+  - 接入 `<目标表名>_spec.json` 契约、一键双检门禁与 `pg-function-craft` 调用 Profile（默认 `target_engine: pg12+`、`return_contract: row_count`、`comma_style: leading`、`project_overrides: [ENG-11, ENG-26]`），并对 §2.4/§2.6/§2.8 中与 `pg-function-craft` 重复的通用 PG 规范改用规则编号引用去重；`SKILL.md` 版本升至 `0.3.0`。
+- 新增 `tests/test_skill_handoff_contract.py`：覆盖 `--kind spec`、DDL/函数 `--spec` 校验、一键双检无重叠分工、`generate_validation_sql.py --spec` 及跨技能路径/Profile 文档契约。
+
+## 0.2.0 — 2026-11-27
+
+统一函数返回与逻辑删除契约，声明与 `pg-function-craft` 的优先级边界，并补齐四套纯标准库离线确定性脚本。
+
+- `references/函数与验收.md`：
+  - 统一 §2.3、§2.6、§2.8 返回契约：新建 DWD 函数一律使用 `RETURNS integer` 返回 `v_rows integer`（`>= 0`，`0 行也算正常`；参数非法 `RETURN -1`），§2.8 模板 `*output` 更新为 `-1参数异常, >=0影响行数`，既有保留状态码 `0` 的函数按 §2.5 保留 `-1参数异常, 0正常`。
+  - §2.4 明确 `v_changed_dates` / `v_changed_months` 从 `update_time` 推导时禁止过滤 `deleted = 0`（`deleted = 0` 仅写在 `INSERT ... SELECT` 抽取阶段）。
+  - 新增 §2.10「与 `pg-function-craft` 的优先级与覆盖声明」，将本技能定位为 `pg-function-craft` `00-风格与边界.md` §6 第 2 层「项目已确认的书面约定」，明示 §2.6 对 `ENG-11`/`ENG-26` 及 §2.3 `v_rows` 对 `0正常` 的覆盖边界，且不得降低 `01`/`02` 安全与正确性基线。
+  - 在「静态检查」与「授权执行与验收」接入 `check_shenergy_artifacts.py --kind func --json`（与 `pg-function-craft` `check_sql_output.py --json` 并列留痕）及 `generate_validation_sql.py`。
+- `references/流程与门禁.md`、`references/产物契约.md`、`SKILL.md`：
+  - 分别在阶段 1/4/5/7/8/9 接入 `parse_bi_snapshot.py`、`check_shenergy_artifacts.py`（`ddl`/`func`/`csv`/`report`）、`generate_validation_sql.py` 与 `verify_offline.py`；在 `SKILL.md` 增加「阶段硬约束与脚本速查表」，`version` 升至 `0.2.0`。
+- 新增离线脚本（纯 Python 3.10+ 标准库，零数据库驱动、零网络调用）：
+  - `scripts/parse_bi_snapshot.py`：离线解析 `BI看`（物理忽略 I/J/K、传播合并单元格、分类 L 列、输出 JSON 与 12 列无 BOM CSV 骨架）。
+  - `scripts/check_shenergy_artifacts.py`：统一静态校验 DDL（`SH-DDL-01`..`09`）、函数（`SH-FN-01`..`09`）、字段对照 CSV（`SH-CSV-01`..`04`）与报告留痕（`SH-RPT-01`..`02`）。
+  - `scripts/generate_validation_sql.py`：生成 `compile`、`reconcile`、`sample`、`missing`、`blood` 与 `all` 标准验证 SQL 模板。
+  - `scripts/verify_offline.py`：技能包离线完整性与零凭据/零网络导入自检。
+- 新增 `tests/test_shenergy_scripts.py`：覆盖四个新脚本的全部核心规则与正反例测试。
+
 ## 0.1.1 — 2026-11-26
 
 明确 `ext_1`–`ext_10` 只是目标表的平台/DDL 预留扩展列，不进入计算脚本。

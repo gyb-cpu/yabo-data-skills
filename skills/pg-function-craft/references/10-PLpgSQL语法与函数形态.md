@@ -17,8 +17,7 @@
 - 部分适用：`LANGUAGE sql` 函数。本文只在“该选 SQL 还是 PL/pgSQL”“返回形态是否一致”时提及，
   不展开 SQL 函数的语法。
 - 不适用：其他过程语言、非 PostgreSQL / Greenplum 方言、客户端驱动侧的分页或重试逻辑。
-- 目标引擎：**PostgreSQL 9.4** 与 **Greenplum 6.6**（核心基于 PostgreSQL 9.4）。现代 PostgreSQL
-  特性必须标出引入版本，或在目标库上标 `待验证`。
+- 目标引擎：默认基线为**原生 PostgreSQL 12+**（13+ 特性需标出引入版本并在目标库确认）；**Greenplum 6.6 / PostgreSQL 9.4**（GP 6.6 核心基于 PG 9.4）为可选兼容目标，仅当显式声明时启用低版本限制。
 
 ### 0.2 编号与相邻文件
 
@@ -47,7 +46,7 @@
 |---|---|---|
 | `语法事实` | PostgreSQL 官方语法定义，可静态核对 | 块结构、语句形式、关键字 |
 | `版本事实` | 官方 release notes / 版本文档给出的引入版本 | 9.5、9.6、10、11、12 等 |
-| `待验证` | 需要在目标 PG 9.4 / GP 6.6 上确认 | GP 对某语法、扩展或视图的支持 |
+| `待验证` | 需要在目标 PG 版本（如 13+）或可选 GP 6.6 上确认 | 高版本特性或 GP 对某语法、扩展、视图的支持 |
 | `static-risk` | 仅由代码形状判断的风险 | 见 §10，不等于慢 |
 | `plan-required` | 需要执行计划才能定论 | 见 §10 |
 | `workload-required` | 需要并发/数据量/锁/WAL 等负载数据才能定论 | 见 §10 |
@@ -60,7 +59,7 @@
 | 来源 | 本文取用的内容 | 未取用的内容 |
 |---|---|---|
 | supabase/agent-skills `supabase-postgres-best-practices` | 函数/查询形态、索引与统计的通用原则、`SECURITY DEFINER` 的 `search_path` 纪律 | 其“100–1000x”等性能倍数；Supabase 专有函数与 RLS 上下文 |
-| github/awesome-copilot `postgresql-code-review` | 触发器函数、JSONB/数组、权限与 RLS 的审查视角 | 现代 PG 专属类型与扩展建议直接套到 9.4 / GP 6.6 |
+| github/awesome-copilot `postgresql-code-review` | 触发器函数、JSONB/数组、权限与 RLS 的审查视角 | 高版本（13+）或 Supabase 专属扩展假设直接套用到通用模板 |
 | claude-dev-suite `skills/databases/plpgsql` | 块结构、异常、游标、动态 SQL、触发器与过程的语法骨架 | 其默认面向现代 PG 的示例（如过程、`ON CONFLICT`） |
 | damusix/skills → `postgres-writing-guidelines` | 块结构、异常与 SQLSTATE 目录、动态 SQL、事务与锁纪律、连接池、触发器“薄函数”形态 | `fn_*`/`pr_*`/`tg_*` 命名、DOMAIN 全覆盖、`FOR UPDATE SKIP LOCKED`、`ON CONFLICT`、`MERGE`、生成列、UUID v7 |
 | PostgreSQL 官方文档 | PL/pgSQL 语句、异常、触发器、过程、事务管理 | — |
@@ -75,24 +74,16 @@ PL/pgSQL 的 `EXCEPTION` 块行为不符，本文以 `PLS-35` 为准。
 
 ### PLS-01 `MUST` 先定目标版本，再选语法
 
-生成或改写前必须确认目标引擎与版本。没有版本信息时，按 **PG 9.4 与 GP 6.6 的交集**写，并把
-所有现代特性列入 `Assumptions` 或“缺失输入”，不得默认“PostgreSQL 都支持”。
+生成或改写前必须确认目标引擎与版本。未显式声明版本时，默认按**原生 PostgreSQL 12+** 基线编写（PG 13+ 特性列入 `Assumptions` 或带版本前提）；仅当显式声明目标为 **GP 6.6 或 PG 9.4** 时按两者交集降级。
 
-### PLS-02 `MUST` 现代特性带版本条件，GP 不套现代 PG
+### PLS-02 `MUST` 高版本特性带版本条件，显式 GP 6.6 目标不套 PG 特性
 
-使用 9.5 及以上特性时，写法必须能回答“目标库版本是否支持”。推荐句式：
+在默认 PostgreSQL 12+ 基线之上使用 13+ 特性（如 `EXPLAIN (WAL)`、`total_exec_time`、`MERGE`）或处于显式 GP 6.6 / PG 9.4 兼容模式时，写法必须回答“目标库版本是否支持”：
 
-- `ON CONFLICT`：PostgreSQL 9.5+；GP 6.6 不支持。
-- `CREATE PROCEDURE` / `CALL`：PostgreSQL 11+；GP 6.6 不支持。
-- `MATERIALIZED` / `NOT MATERIALIZED` CTE：PostgreSQL 12+；GP 6.6 不支持。
-- `PARALLEL SAFE` / `PARALLEL RESTRICTED`：PostgreSQL 9.6+；GP 6.6 不支持。
-- 转换表（`REFERENCING OLD TABLE ...`）：PostgreSQL 10+；GP 6.6 不支持。
-- `GENERATED ... AS IDENTITY`：PostgreSQL 10+；GP 6.6 不支持。
-- `INCLUDE` 覆盖索引：PostgreSQL 11+；GP 6.6 不支持。
-- `CREATE TRIGGER ... EXECUTE FUNCTION`：PostgreSQL 11+；9.4 与 GP 6.6 用 `EXECUTE PROCEDURE`。
-- 行级安全（RLS）：PostgreSQL 9.5+；GP 6.6 不支持。
+- PG 12+（默认基线可用，仅显式 GP 6.6 / PG 9.4 需规避或降级）：`ON CONFLICT`（9.5+）、`SKIP LOCKED`（9.5+）、RLS（9.5+）、`PARALLEL SAFE`（9.6+）、`GENERATED AS IDENTITY` / 转换表（10+）、`CREATE PROCEDURE` / `INCLUDE` / `EXECUTE FUNCTION`（11+）、`[NOT] MATERIALIZED` CTE / `REINDEX CONCURRENTLY`（12+）。
+- PG 13+（默认 PG 12+ 基线未包含，需确认目标版本）：`EXPLAIN (WAL)`、`pg_stat_statements.total_exec_time`、`gen_random_uuid()` 内置（13+）；`pg_locks.waitstart`（14+）；`MERGE`（15+）。
 
-GP 6.6 基于 PostgreSQL 9.4，且有自己的执行模型。以下结论不能平移：
+当显式指定目标为 GP 6.6（基于 PG 9.4）时，注意其独有执行模型，以下结论不能平移：
 
 - 没有 `ON CONFLICT`、`CREATE PROCEDURE`、RLS、`SKIP LOCKED`、`GROUPING SETS` / `CUBE` / `ROLLUP`、
   `PARALLEL` 属性、转换表、`MATERIALIZED` CTE、identity 列。
@@ -110,34 +101,36 @@ GP 6.6 基于 PostgreSQL 9.4，且有自己的执行模型。以下结论不能�
 **本表是版本事实的唯一来源。** `04`、`06`、`07`、`08` 需要判断“某特性是否可用”时引用本节，
 不再各自维护清单。`08` §7.1 只定义“查到之后怎么定级”。
 
-| 特性 | PG 9.4 | GP 6.6 | 引入版本 | 本文默认 |
+| 特性 | PG 12+（默认） | GP 6.6 / PG 9.4（可选） | 引入版本 | 默认策略 |
 |---|---|---|---|---|
-| `jsonb` 类型 | 可用 | `待验证` | 9.4 | 可用；GP 先确认 |
-| `FILTER` 聚合子句 | 可用 | `待验证` | 9.4 | 可用；GP 先确认 |
-| `WITH ORDINALITY` | 可用 | `待验证` | 9.4 | 可用；GP 先确认 |
-| `ON CONFLICT` | 否 | 否 | 9.5 | 不用于 9.4 / GP 6.6 |
-| RLS / `CREATE POLICY` | 否 | `待验证` | 9.5 | 不用于 9.4；GP 先确认 |
-| `SKIP LOCKED` | 否 | 否 | 9.5 | 不用于 9.4 / GP 6.6 |
-| `GROUPING SETS` / `CUBE` / `ROLLUP` | 否 | 否 | 9.5 | 不用于 9.4 / GP 6.6 |
-| BRIN 索引 | 否 | 否 | 9.5 | 不用于 9.4 / GP 6.6 |
-| `ASSERT`（PL/pgSQL） | 否 | 否 | 9.5 | 不用于 9.4 / GP 6.6 |
-| `jsonb_set` | 否 | 否 | 9.5 | 不用于 9.4 / GP 6.6 |
-| `PARALLEL` 函数属性 | 否 | 否 | 9.6 | 不用于 9.4 / GP 6.6 |
-| `pg_stat_progress_vacuum` | 否 | 否 | 9.6 | 诊断脚本不写进通用模板 |
-| `wait_event` / `wait_event_type` | 否 | 否 | 9.6 | 诊断脚本不写进通用模板 |
-| identity 列 | 否 | 否 | 10 | 不用于 9.4 / GP 6.6；用 `serial`/序列 |
-| 触发器转换表 | 否 | 否 | 10 | 不用于 9.4 / GP 6.6 |
-| `CREATE STATISTICS` | 否 | 否 | 10 | 不用于 9.4 / GP 6.6 |
-| `CREATE PROCEDURE` / `CALL` / 过程内 `COMMIT` | 否 | 否 | 11 | 不用于 9.4 / GP 6.6 |
-| `INCLUDE` 覆盖索引 | 否 | 否 | 11 | 不用于 9.4 / GP 6.6 |
-| `EXECUTE FUNCTION`（触发器） | 否 | 否 | 11 | 9.4 / GP 用 `EXECUTE PROCEDURE` |
-| `MATERIALIZED` CTE | 否 | 否 | 12 | 不用于 9.4 / GP 6.6 |
-| `REINDEX CONCURRENTLY` | 否 | 否 | 12 | 不用于 9.4 / GP 6.6 |
-| `EXPLAIN (WAL)` | 否 | 否 | 13 | 诊断脚本不写进通用模板 |
-| `pg_stat_statements.total_exec_time` | 否 | 否 | 13 | 9.4 用 `total_time` |
-| hash 索引 WAL-safe | 否 | 否 | 10 | 9.4 的 hash 索引崩溃后可能损坏 |
+| `jsonb` 类型 | 可用 | PG 9.4 可用；GP `待验证` | 9.4 | PG 12+ 可用；GP 先确认 |
+| `FILTER` 聚合子句 | 可用 | PG 9.4 可用；GP `待验证` | 9.4 | PG 12+ 可用；GP 先确认 |
+| `WITH ORDINALITY` | 可用 | PG 9.4 可用；GP `待验证` | 9.4 | PG 12+ 可用；GP 先确认 |
+| `ON CONFLICT` | 可用 | 否 | 9.5 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| RLS / `CREATE POLICY` | 可用 | 9.4 否；GP `待验证` | 9.5 | PG 12+ 可评估；GP 先确认 |
+| `SKIP LOCKED` | 可用 | 否 | 9.5 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `GROUPING SETS` / `CUBE` / `ROLLUP` | 可用 | 否 | 9.5 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| BRIN 索引 | 可用 | 否 | 9.5 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `ASSERT`（PL/pgSQL） | 可用 | 否 | 9.5 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `jsonb_set` | 可用 | 否 | 9.5 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `PARALLEL` 函数属性 | 可用 | 否 | 9.6 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `pg_stat_progress_vacuum` | 可用 | 否 | 9.6 | PG 12+ 可用；GP / 9.4 查 `pg_stat_activity` |
+| `wait_event` / `wait_event_type` | 可用 | 否 | 9.6 | PG 12+ 可用；GP / 9.4 查 `waiting` |
+| hash 索引 WAL-safe | 可用 | 否（9.4 崩溃风险 / GP 禁用） | 10 | PG 12+ 安全；9.4 / GP 不推荐 |
+| identity 列 | 可用 | 否 | 10 | PG 12+ 可用（既有 `serial` 不擅改）；GP / 9.4 用 `serial` |
+| 触发器转换表 | 可用 | 否 | 10 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `CREATE STATISTICS` | 可用 | 否 | 10 | PG 12+ 可用；仅 GP / 9.4 规避 |
+| `CREATE PROCEDURE` / `CALL` / 过程内 `COMMIT` | 可用 | 否 | 11 | PG 12+ 可用（受 `PLS-44` 约束）；GP / 9.4 无过程 |
+| `INCLUDE` 覆盖索引 | 可用 | 否 | 11 | PG 12+ 可用；仅 GP / 9.4 用多列索引 |
+| `EXECUTE FUNCTION`（触发器） | 可用 | 否 | 11 | PG 12+ 可用；GP / 9.4 用 `EXECUTE PROCEDURE` |
+| `MATERIALIZED` / `NOT MATERIALIZED` CTE | 可用 | 否 | 12 | PG 12+ 可用；GP / 9.4 恒物化 |
+| `REINDEX CONCURRENTLY` | 可用 | 否 | 12 | PG 12+ 可用；GP / 9.4 用普通 `REINDEX` |
+| `EXPLAIN (WAL)` | 否（需 PG 13+） | 否 | 13 | 需确认目标 >= PG 13 |
+| `pg_stat_statements.total_exec_time` | 否（PG 12 为 `total_time`，PG 13+ 用 `total_exec_time`） | 否（用 `total_time`） | 13 | 诊断脚本按版本区分列名 |
+| `pg_locks.waitstart` | 否（需 PG 14+） | 否 | 14 | 需确认目标 >= PG 14 |
+| `MERGE` | 否（需 PG 15+） | 否 | 15 | PG 12+ 默认不直接依赖，需 >= PG 15 |
 
-表内“可用”只表示语法属于 9.4 基线；GP 6.6 的 `jsonb`、GIN、`FILTER` 等实际支持范围仍标
+上表“可用”只代表原生 PG 12+ 语法合法；若显式切换到 GP 6.6，`jsonb`、GIN、`FILTER` 等实际支持范围仍标
 `待验证`，需在目标库用 `\df`、`pg_settings` 或最小样例确认。
 
 ## 2. 函数形态、查询结果与属性
@@ -149,7 +142,7 @@ GP 6.6 基于 PostgreSQL 9.4，且有自己的执行模型。以下结论不能�
 | 函数 | `SELECT` / 表达式 / `FROM` | 不能 `COMMIT` / `ROLLBACK` | 计算、查询、落表、返回集合 |
 | 过程（PG 11+） | `CALL` | 受调用上下文限制，见 PLS-44 | 需要分批提交的长任务 |
 | 触发器函数 | 由触发器调用 | 跟随触发语句 | 审计、校验、派生列 |
-| `DO` 块 | 一次性执行 | 9.4 无事务控制；11+ 顶层可控制 | 迁移、校验、一次性修复 |
+| `DO` 块 | 一次性执行 | PG 12+（11+）顶层可控制；9.4 / GP 无事务控制 | 迁移、校验、一次性修复 |
 
 不要用函数模拟过程的分批提交；也不要把触发器函数当普通函数直接 `SELECT` 调用。
 
@@ -159,7 +152,7 @@ GP 6.6 基于 PostgreSQL 9.4，且有自己的执行模型。以下结论不能�
 - 只有 `IN` / `INOUT` 参数可以有默认值；`OUT` 参数不能有默认值。
 - `VARIADIC` 只能有一个，且只能放在最后；`VARIADIC` 之后只能跟 `OUT` 参数。
 - `OUT` / `INOUT` 不能与 `RETURNS TABLE` 混用；`RETURNS TABLE` 已隐含集合返回。
-- 命名参数调用（`f(p_limit => 10)`）在 9.4 可用；不要用默认值制造歧义重载。
+- 命名参数调用（`f(p_limit => 10)`）可用；不要用默认值制造歧义重载。
 - 同名、不同输入参数类型是不同函数；`DROP FUNCTION` 必须带参数类型。
 - 重载解析可能因隐式 cast 选错函数；调用方应显式 cast。
 
@@ -248,7 +241,7 @@ FROM demo.f_dynamic() AS t (id bigint, amount numeric);
 - 两者可以混用，结果按执行顺序拼接。
 - 最后用无参数的 `RETURN;` 结束，或让控制走到函数末尾。
 
-`RETURN NEXT` / `RETURN QUERY` 不会立即返回调用方；它们只累积结果集。PostgreSQL 9.4 文档说明
+`RETURN NEXT` / `RETURN QUERY` 不会立即返回调用方；它们只累积结果集。PostgreSQL 文档说明
 该实现会先把整个结果集累积起来再返回；结果集很大时可能写入磁盘，受 `work_mem` 影响。这是实现事实，不等于“必然慢”；
 实际影响属于 `workload-required`，需要结果行数、内存与耗时数据。
 
@@ -316,7 +309,7 @@ $function$;
 - `pg_temp` 必须**显式放在最后**；只写“排除 `pg_temp`”不够。
 - 所有对象名尽量 schema 限定；不要依赖调用方的 `search_path`。
 - `REVOKE EXECUTE ON FUNCTION ... FROM PUBLIC`；按最小权限授予角色。
-- `SET search_path = ''` 是更严格的写法，但要求函数内所有对象都限定；9.4 可用，GP 6.6 需用户侧验证。
+- `SET search_path = ''` 是更严格的写法，但要求函数内所有对象都限定；PG 12+ 与 9.4 均可用，GP 6.6 需用户侧验证。
 - 函数 owner 使用最小权限角色；不要用 superuser 作为 owner。
 - 这条与 `references/01-基线规范.md` 的“安全”一节重复时，以 01 为准；本文只固定语法形态。
 
@@ -475,7 +468,7 @@ OPEN v_cur FOR EXECUTE 'SELECT ... WHERE id = $1' USING p_id;
 
 取行状态只用 PL/pgSQL 真正提供的接口：
 
-- `FETCH` 之后检查特殊变量 `FOUND`：取到行则为 true，没有下一行则为 false（9.4 官方文档
+- `FETCH` 之后检查特殊变量 `FOUND`：取到行则为 true，没有下一行则为 false（PG 官方文档
   “Using Cursors” 一节只给出这一种判断方式）。
 - **PL/pgSQL 没有 `cur%FOUND` / `cur%ROWCOUNT` / `cur%ISOPEN` 这类游标属性**。它们是 Oracle
   PL/SQL 的语法，PostgreSQL 不实现，照抄会在编译时报语法错误；`FOUND`、`ROW_COUNT` 也不能
@@ -632,8 +625,8 @@ END;
 
 ### PLS-36 `MUST` 不要用异常做正常控制流
 
-- 用 `WHERE` 谓词、`EXISTS`、`ON CONFLICT`（仅 9.5+）或先查后写来处理可预期分支。
-- 9.4 / GP 6.6 没有 `ON CONFLICT` 时，`unique_violation` 重试可能是可移植方案；但要在注释里
+- 默认 PG 12+ 优先用 `WHERE` 谓词、`EXISTS`、`ON CONFLICT` 或先查后写处理可预期分支。
+- 仅当显式声明目标为 PG 9.4 / GP 6.6（无 `ON CONFLICT`）时，`unique_violation` 重试才是可移植方案；但要在注释里
   写明“依赖异常做并发分支”，并区分是哪个唯一索引触发。
 - 不要在循环里用异常块处理大量预期失败；异常块的子事务开销会累积。
 - 异常信息要带上下文但不泄露敏感数据：带函数名、关键参数名、业务键；不要带连接串、口令、
@@ -696,8 +689,8 @@ $function$;
 
 ### PLS-39 `MUST` 触发器 DDL 使用目标版本支持的写法
 
-- PG 9.4 / GP 6.6：`CREATE TRIGGER ... EXECUTE PROCEDURE demo.f_trg();`
-- PG 11+：`CREATE TRIGGER ... EXECUTE FUNCTION demo.f_trg();`（`EXECUTE PROCEDURE` 仍被接受）
+- 默认 PG 12+（11+）：`CREATE TRIGGER ... EXECUTE FUNCTION demo.f_trg();`（`EXECUTE PROCEDURE` 仍被接受）
+- 显式 PG 9.4 / GP 6.6 目标：只能写 `CREATE TRIGGER ... EXECUTE PROCEDURE demo.f_trg();`
 - 省略 `FOR EACH` 时默认是 `FOR EACH STATEMENT`；行级触发器必须显式写 `FOR EACH ROW`。
 - `INSTEAD OF` 只能用于视图，且只能是行级。
 - 约束触发器（`CREATE CONSTRAINT TRIGGER`）是 `AFTER ROW` 的特殊形式，可延迟；普通业务触发器
@@ -708,9 +701,8 @@ $function$;
 - `WHEN (condition)` 只用于行级触发器；`INSERT` 触发器不能引用 `OLD`，`DELETE` 触发器不能引用
   `NEW`。需要跨操作判断时在函数体里用 `TG_OP`。
 - `UPDATE OF col1, col2` 只对 `UPDATE` 事件有效；不能用于 `INSERT` / `DELETE`。
-- 转换表 `REFERENCING OLD TABLE AS ... NEW TABLE AS ...` 仅 PostgreSQL 10+、仅 `AFTER` 触发器、
-  不能用于视图或约束触发器；GP 6.6 不支持。需要“批量变更后处理”时，用语句级触发器 + 临时表
-  或应用侧批处理。
+- 转换表 `REFERENCING OLD TABLE AS ... NEW TABLE AS ...` 在 PG 10+（含默认 PG 12+）支持、仅 `AFTER` 触发器、
+  不能用于视图或约束触发器；显式 GP 6.6 / PG 9.4 目标不支持（可用语句级触发器 + 临时表或应用侧批处理替代）。
 
 ### PLS-41 `MUST` 触发器陷阱要显式防护
 
@@ -735,6 +727,8 @@ $function$;
 
 ### PLS-43 `MUST` `CREATE PROCEDURE` 不带 `RETURNS`
 
+以下为语法示例（节选，省略头部注释；过程命名按项目约定）：
+
 ```sql
 CREATE OR REPLACE PROCEDURE demo.p_batch(p_from date)
 LANGUAGE plpgsql
@@ -753,7 +747,7 @@ CALL demo.p_batch(date '2026-01-01');
 - 过程可以有 `IN` / `OUT` / `INOUT` 参数，但没有 `RETURNS` 子句。
 - 调用用 `CALL`，不能出现在 `SELECT` 表达式或 `FROM` 子句中。
 - `CREATE OR REPLACE PROCEDURE` 不能改参数类型；改名/改类型等于新建。
-- GP 6.6 没有过程；需要分批提交时只能用函数 + 调用方事务，或应用侧分批。
+- 默认 PG 12+ 可使用过程；仅显式声明目标为 GP 6.6 或 PG 9.4 时不支持过程，只能用函数 + 调用方事务或应用侧分批。
 
 ### PLS-44 `MUST` 过程的事务控制受调用上下文限制
 
@@ -799,7 +793,7 @@ CALL demo.p_batch(date '2026-01-01');
   `BUFFERS` 需确认；不支持时用 `EXPLAIN ANALYZE` 并读 slice/segment。
 - `workload-required` 需要并发、数据量、锁等待、WAL、临时文件、缓存命中等测量；没有这些数据时
   只能写“待验证”。
-- 跨版本（PG 9.4 ↔ 现代 PG）与跨引擎（PG ↔ GP）的计划不可直接比较。
+- 跨大版本（如 PG 12 ↔ PG 15+ 或 PG 9.4）与跨引擎（PG ↔ GP）的计划不可直接比较。
 - 语法改写（集合化、去游标、拆 CTE）可能改变语义与计划，必须先过 `references/05-重写协议.md`。
 
 ## 11. 生成 / 改写 / 审查检查清单
@@ -837,10 +831,10 @@ CALL demo.p_batch(date '2026-01-01');
   <https://github.com/github/awesome-copilot/blob/main/skills/postgresql-code-review/SKILL.md>
 - claude-dev-suite，`skills/databases/plpgsql`：
   <https://github.com/claude-dev-suite/claude-dev-suite/tree/main/skills/databases/plpgsql>
-- PostgreSQL 9.4 文档，PL/pgSQL：
-  <https://www.postgresql.org/docs/9.4/plpgsql.html>
-  - 基本语句：<https://www.postgresql.org/docs/9.4/plpgsql-statements.html>
-  - 控制结构：<https://www.postgresql.org/docs/9.4/plpgsql-control-structures.html>
+- PostgreSQL 12 文档，PL/pgSQL：
+  <https://www.postgresql.org/docs/12/plpgsql.html>
+  - 基本语句：<https://www.postgresql.org/docs/12/plpgsql-statements.html>
+  - 控制结构：<https://www.postgresql.org/docs/12/plpgsql-control-structures.html>
 - PostgreSQL 当前文档，`CREATE PROCEDURE`：
   <https://www.postgresql.org/docs/current/sql-createprocedure.html>
 - PostgreSQL 当前文档，事务管理：
@@ -855,7 +849,7 @@ CALL demo.p_batch(date '2026-01-01');
 
 ### 12.2 不可支持的结论
 
-- 未在 PostgreSQL 9.4 或 Greenplum 6.6 上编译、执行或验证任何片段。
+- 未在 PostgreSQL 12+ 或任何可选兼容目标（GP 6.6 / PG 9.4）上编译、执行或验证任何片段。
 - 未验证 GP 6.6 对 `jsonb`、`FILTER`、`WITH ORDINALITY`、GIN、`GET STACKED DIAGNOSTICS`、
   `pg_stat_statements` 的具体支持；相关项标 `待验证`。
 - 未运行 pgFormatter、SQLFluff 或其他外部工具；排版结论以 `references/06-SQL排版规范.md` 为准。

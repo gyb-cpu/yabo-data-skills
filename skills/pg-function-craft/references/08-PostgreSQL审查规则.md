@@ -34,10 +34,8 @@
 
 ### 0.3 版本前提
 
-目标基线为 **PostgreSQL 9.4 / Greenplum 6.6**。审查时先确认引擎与版本；未确认时按 GP 兼容
-处理，并把现代语法列为待确认项。版本标记沿用 `07-性能优化规则.md` §0.3：
-`[9.4]`、`[9.5+]`、`[9.6+]`、`[10+]`、`[11+]`、`[12+]`、`[13+]`、`[14+]`、`[15+]`、
-`[GP-待验证]`、`[待验证]`。
+默认目标基线为 **原生 PostgreSQL 12+**。审查时先确认引擎与版本；未声明时按原生 PG 12+ 基线处理，PG 13+ 特性标版本前提；仅当显式声明目标为 GP 6.6 或 PG 9.4 时启用对应降级兼容规则。版本标记沿用 `07-性能优化规则.md` §0.3：
+`[PG 12+]`、`[13+]`、`[14+]`、`[15+]`、`[GP-6.6]`、`[GP-待验证]`、`[待验证]`。
 
 ### 0.4 来源登记
 
@@ -92,7 +90,7 @@
 
 | 级别 | 使用条件 | 典型例子 | 不能用于 |
 |---|---|---|---|
-| `BLOCKER` | 已确凿的安全/正确性缺陷，或已证实的严重性能问题（有 `EXPLAIN`/负载证据） | 值拼接进动态 SQL；definer 无 `search_path`；`WHEN OTHERS THEN NULL`；9.4 用了 `ON CONFLICT` | 仅凭代码形状猜测的慢；没有 schema 的删除范围推断 |
+| `BLOCKER` | 已确凿的安全/正确性缺陷，或已证实的严重性能问题（有 `EXPLAIN`/负载证据） | 值拼接进动态 SQL；definer 无 `search_path`；`WHEN OTHERS THEN NULL`；PG 12 目标用了 PG 15+ 的 `MERGE`（或显式 GP 6.6 目标用了 `ON CONFLICT`） | 仅凭代码形状猜测的慢；没有 schema 的删除范围推断 |
 | `WARNING` | 需要 schema、计划、负载或人工确认的风险；契约可能不成立 | 缺索引；过滤列套函数；0 行语义不清；临时表残留 | 已确认会报错/丢数据的缺陷（应升 `BLOCKER`） |
 | `INFO` | 可维护性、可读性、一致性建议，不影响正确性 | 函数职责过多；命名不统一；注释缺失 | 安全问题（不能降级为 INFO） |
 | `STYLE-FMT` | 仅排版偏差（`F-xx`） | 缩进、关键字大小写、逗号位置 | 任何语义、性能、安全问题 |
@@ -114,7 +112,7 @@
 | REV-S04 | `search_path` 含不可信 schema、顺序错误、只写“排除 pg_temp” | `BLOCKER` | 列出实际 `search_path` | 显式列受信 schema；`pg_temp` 放最后；对象全限定 |
 | REV-S05 | definer 函数对 `PUBLIC` 开放 `EXECUTE` 或权限过宽 | `WARNING`（与 S03/S04 同现时 `BLOCKER`） | `pg_proc.proacl`、`GRANT` 记录 | `REVOKE ... FROM PUBLIC`；按角色最小授权 |
 | REV-S06 | 应用使用 superuser/owner 连接，或 `GRANT ALL` 到宽范围 | `WARNING` | 角色与授权语句 | 拆分读写角色；只授必要对象与序列 |
-| REV-S07 | 依赖 RLS 但目标不支持或策略缺失 | `WARNING`；9.4/GP 标“不适用” | 版本 + `pg_policies`（9.5+） | 9.5+ 才评估；9.4 用视图/权限/入口校验 |
+| REV-S07 | 依赖 RLS 但目标不支持或策略缺失 | `WARNING`；显式声明 PG 9.4 / GP 时标“不适用” | 版本 + `pg_policies`（PG 12+ 默认支持） | PG 12+ 评估策略完整性；仅 GP / PG 9.4 改用视图/权限/入口校验 |
 | REV-S08 | 敏感值进入 `RAISE`、异常文本、注释、动态 SQL 日志 | `WARNING` | 展示输出语句与变量 | 改 `RAISE DEBUG`；只打印长度/谓词摘要；脱敏 |
 
 补充判断：
@@ -125,7 +123,7 @@
   `search_path` 问题降为 `WARNING`（仍可能影响解析与性能）。
 - `REV-S05` 需要实际 ACL；`pg_get_functiondef` 不导出 `GRANT`/`REVOKE`，文本里没有授权语句
   不能证明未授权。
-- `REV-S07`：RLS 是 `[9.5+]`；Greenplum 6.6 的支持情况 `[GP-待验证]`。不要把 Supabase 的
+- `REV-S07`：RLS 在默认 PG 12+ 可用（9.5+ 引入）；若目标显式为 Greenplum 6.6 则支持情况 `[GP-待验证]`。不要把 Supabase 的
   `auth.uid()` 策略照搬到本技能；本技能没有该函数。
 - `REV-S08`：`RAISE INFO '%', v_sql` 会打印参数值（见 `AP-09`）；生产路径不得保留。
 
@@ -140,7 +138,7 @@
 | REV-C05 | 把 0 行当成功或失败条件 | `WARNING` | `ROW_COUNT`/返回路径 | 用 `GET DIAGNOSTICS` 或落表后计数；0 行可合法 |
 | REV-C06 | `DELETE`/`TRUNCATE` 范围大于可重建范围 | `BLOCKER` | 删除谓词 + 插入来源 + 业务键 | 带谓词；整表刷新显式声明范围与恢复边界 |
 | REV-C07 | 临时表同会话重入/残留/命名冲突 | `WARNING` | 建表/清理路径 + 调用模式 | `ON COMMIT DROP` 或显式 `DROP`；业务前缀 |
-| REV-C08 | 函数内使用 `COMMIT`/`ROLLBACK`，或假设自治事务 | `BLOCKER`（9.4 语法错误） | 函数体 | 事务交给调用方；过程 `[11+]` 才能控制事务 |
+| REV-C08 | 函数内使用 `COMMIT`/`ROLLBACK`，或假设自治事务 | `BLOCKER`（函数体语法/语义错误） | 函数体 | 事务交给调用方；需跨事务提交时改用过程（`[11+]`，默认 PG 12+ 可用，受 `PLS-44` 约束） |
 | REV-C09 | 触发器函数返回值错误（`BEFORE` 行级未返回 `NEW`/`OLD`） | `BLOCKER` | `RETURN` 路径 + 触发器类型 | 按 `TG_OP` 返回 `NEW`/`OLD`；跳过操作用 `RETURN NULL` |
 | REV-C10 | 幂等/重跑声明不成立（日期窗、序列、外部副作用） | `WARNING` | 整次调用的输入与副作用 | 按整次调用声明可重跑性；列出不可回滚项 |
 | REV-C11 | 异常文本/函数名与自身不符，副本未改名 | `WARNING` | 重抛文本 + 函数名 | 同步改名；用 `SQLSTATE` 而非文本分支 |
@@ -187,10 +185,6 @@
 | REV-P15 | 可独立提供目标业务键的源只出现在 `LEFT JOIN` 补列侧，未进入驱动键集合 | `PERF-52` | `WARNING`；确认漏行时 `BLOCKER` | `static-risk` |
 | REV-P16 | 目标粒度转换留到最终层，或最终 `SELECT` 重复执行 24→96 等展开 | `PERF-53` | `WARNING`；确认重复计算或结果异常时 `BLOCKER` | `static-risk` + `plan-required` |
 | REV-P17 | 合同派生表先全表按 `contract_id` 聚合，日期窗口和业务域交易单元过滤只在外层 `ON` 中出现 | `PERF-54` | `WARNING`；确认无关合同被聚合或结果串值时 `BLOCKER` | `static-risk` + `plan-required` |
-| REV-M10 | ETL 审查缺少函数/执行模式/源表/粒度/物化路径或离线边界核对 | `PERF-51`、`INC-14` | `INFO`；阻碍行为判断时 `WARNING` | `not verified` |
-| REV-M11 | 为 SQL 可直接表达的源存在性检查增加 `to_regclass` 变量，或为简单无映射告警增加无必要计数变量 | `ENG-25` | `INFO` | `static-risk` |
-| REV-M12 | 临时表上方缺少数据类型、物化理由/复用位置或生命周期说明 | `ENG-27` | `INFO`；影响复用或清理判断时 `WARNING` | `not verified` |
-| REV-M13 | 宽表 `INSERT` 的目标列与 `SELECT` 列缺少逐列对应注释，难以审查字段顺序 | `ENG-30` | `INFO` | `not verified` |
 
 写法要求：
 
@@ -213,81 +207,88 @@
 | REV-M04 | 硬编码 schema/库名（`db_<省>`、`dw_<省>`） | `WARNING` | 换环境即失效；集中配置或参数化（`AP-07`） |
 | REV-M05 | 复制副本残留（`_copyN`、重复函数体、异常文本未改） | `WARNING` | 与 `REV-C11` 联动 |
 | REV-M06 | 排版偏差 | `STYLE-FMT` | 只记 `F-xx`，不与语义问题混排 |
-| REV-M07 | 依赖未声明（扩展、schema、外部表） | `WARNING` | 9.4 上扩展可用性需确认；GP `[GP-待验证]` |
+| REV-M07 | 依赖未声明（扩展、schema、外部表） | `WARNING` | 目标版本上扩展可用性需确认；显式 GP 目标 `[GP-待验证]` |
 | REV-M08 | 只授对象权限、未授 schema `USAGE`，或未来对象未设默认权限 | `WARNING` | `USAGE` 与 `SELECT`/`EXECUTE` 必须同时具备；`ALTER DEFAULT PRIVILEGES` 按需 |
 | REV-M09 | 命名与项目约定冲突（外部来源建议 `fn_*`/`pr_*`，本技能可能用 `f_*`/`p_*`） | `INFO` | 命名是风格，不是安全；以项目书面约定为准，不因外部来源改名 |
+| REV-M10 | ETL 审查缺少函数/执行模式/源表/粒度/物化路径或离线边界核对 | `INFO`（阻碍行为判断时 `WARNING`） | 对应 `PERF-51`、`INC-14`；证据档 `not verified` |
+| REV-M11 | 为 SQL 可直接表达的源存在性检查增加 `to_regclass` 变量，或为简单无映射告警增加无必要计数变量 | `INFO` | 对应 `ENG-25`；证据档 `static-risk` |
+| REV-M12 | 临时表上方缺少数据类型、物化理由/复用位置或生命周期说明 | `INFO`（影响复用或清理判断时 `WARNING`） | 对应 `ENG-27`；证据档 `not verified` |
+| REV-M13 | 宽表 `INSERT` 的目标列与 `SELECT` 列缺少逐列对应注释，难以审查字段顺序 | `INFO` | 对应 `ENG-30`；证据档 `not verified` |
 
 ## 7. 方言与版本（REV-D）
 
 | ID | 检查点 | 默认级别 | 说明 |
 |---|---|---|---|
-| REV-D01 | 使用 9.4 不支持的语法 | `BLOCKER` | 见 §7.1 门槛表 |
-| REV-D02 | 触发器写成 `EXECUTE FUNCTION` | `BLOCKER`（9.4/GP 6.6） | 9.4 用 `EXECUTE PROCEDURE`；`EXECUTE FUNCTION` 为 `[11+]` |
-| REV-D03 | `ON CONFLICT`、`SKIP LOCKED`、`GROUPING SETS`、`GENERATED AS IDENTITY`、`CREATE PROCEDURE` | `BLOCKER` | 分别 `[9.5+]`、`[9.5+]`、`[9.5+]`、`[10+]`、`[11+]` |
+| REV-D01 | 使用超出目标版本的语法（默认基线 PG 12+） | `BLOCKER` | 见 §7.1 门槛表与 `10` §1.1 |
+| REV-D02 | 触发器 `EXECUTE FUNCTION` 与目标版本冲突 | `BLOCKER`（仅显式 PG 9.4 / GP 6.6 目标） | 默认 PG 12+ 可用 `EXECUTE FUNCTION`（PG 11+）；仅 PG 9.4 / GP 6.6 必须改 `EXECUTE PROCEDURE` |
+| REV-D03 | 高版本或平台限定特性（如 PG 13+ / PG 15+ `MERGE`，或显式 GP 6.6 禁用特性）未校验目标版本 | `BLOCKER`（超版本时）；`INFO`（已核对版本） | PG 12+ 默认可用 `ON CONFLICT`/`SKIP LOCKED`/`GROUPING SETS`/`GENERATED AS IDENTITY`/`CREATE PROCEDURE`；PG 15+ `MERGE` 须核对版本 |
 | REV-D04 | GP 专属语法混入通用模板 | `WARNING` | `DISTRIBUTED BY`、`SPLIT DEFAULT PARTITION`、`EXCHANGE PARTITION`、`WITH (appendonly=...)` |
 | REV-D05 | PG ↔ GP 结论互推（索引、分区裁剪、CTE、并行、统计） | `WARNING` | 见 `07` §7.5 |
-| REV-D06 | 版本相关列名/函数照抄现代示例 | `WARNING` | 如 `total_exec_time`、`wait_event`、`pg_stat_progress_vacuum` |
+| REV-D06 | 版本相关列名/函数照抄不匹配版本 | `WARNING` | 如 PG 12 诊断脚本误写 `[13+]` 的 `total_exec_time`、`EXPLAIN (WAL)` 或 `[14+]` 的 `pg_locks.waitstart` |
 
-### 7.1 9.4 / GP 6.6 语法门槛
+### 7.1 版本与方言语法门槛
 
 **版本事实只有一份：`10-PLpgSQL语法与函数形态.md` §1.1。** 本节不重复特性清单，只定义
 “查到了之后怎么定级”。
 
 - 目标版本不支持、且代码已使用该特性 → `BLOCKER`（`REV-D01`）。
-- 只影响诊断脚本或统计列名（如 `pg_stat_progress_vacuum`、`wait_event`、`EXPLAIN (WAL)`、
-  `total_exec_time`）→ `WARNING`。
+- 只影响诊断脚本或统计列名（如 PG 13+ 的 `EXPLAIN (WAL)`、`total_exec_time` 或 PG 14+ 的
+  `pg_locks.waitstart`）→ `WARNING`。
 - `[GP-待验证]` 的项（GIN/GiST、`BUFFERS` 实际输出、`pg_stat_statements`、RLS、AO 表维护、
-  `CREATE INDEX CONCURRENTLY`）不得按社区 PG 直接判 `BLOCKER`；先确认目标集群，再定级。
-- 版本未声明时，按 9.4 / GP 6.6 保守判定，并在结论里写明这是假设。
+  `CREATE INDEX CONCURRENTLY`）仅在显式目标为 GP 集群时核对，且不得按社区 PG 直接判
+  `BLOCKER`；先确认目标集群，再定级。
+- 版本未声明时，默认按原生 PG 12+ 基线判定（PG 13+ 特性标版本前提）；仅当显式声明目标为
+  GP 6.6 或 PG 9.4 时按降级交集判定，并在结论里写明这是假设。
 
-`CREATE INDEX CONCURRENTLY`：PG 9.4 可用，GP 6.6 文档明确不支持，且在 PG 中也不能放进
-事务块/函数内（与 `07` §2.4 一致）。审查时按“PG 9.4 可用、GP 待确认”处理。
+`CREATE INDEX CONCURRENTLY`：原生 PG 12+ 可用（PG 中仍不能放进事务块/函数内，与 `07` §2.4 一致）；
+仅当显式声明 GP 6.6 时文档明确不支持。审查时按“原生 PG 12+ 可用、显式 GP 目标不支持”处理。
 
 ## 8. 参考来源的已知偏差（必须纠正）
 
-以下不是“来源错了所以整体不可用”，而是“来源假设了更新的 PG 或特定平台”，移植时必须降级。
+以下不是“来源错了所以整体不可用”，而是“来源假设了特定平台或高于默认基线 PG 12+ 的特性”，
+按默认基线或可选兼容目标移植时必须核对。
 
 ### 8.1 SRC-1（Supabase）
 
-| 来源写法/假设 | 偏差 | 本技能处理 |
+| 来源写法/假设 | 偏差或版本前提 | 本技能处理 |
 |---|---|---|
 | `auth.uid()`、`auth.role()`、`service_role` | Supabase 平台函数/角色 | 本技能没有；用调用方身份参数或 `current_user` |
-| `CREATE POLICY ... USING ((select auth.uid()) = user_id)` | RLS 为 `[9.5+]` | 9.4/GP 6.6 不适用；不要写进通用模板 |
-| `SET search_path = ''` | 需要全限定对象；与基线不同但可接受 | 二选一：空 `search_path` + 全限定，或 `pg_catalog, <trusted>, pg_temp` |
-| `CREATE INDEX ... INCLUDE` | `[11+]` | 9.4 用多列索引 |
-| BRIN 索引 | `[9.5+]` | 9.4 不可用 |
-| `ON CONFLICT` | `[9.5+]` | 9.4 不可用 |
-| `SKIP LOCKED` | `[9.5+]` | 9.4 不可用 |
-| `total_exec_time`/`mean_exec_time` | `[13+]` | 9.4 用 `total_time`/`mean_time` |
-| `pg_stat_progress_vacuum` | `[9.6+]` | 9.4 不可用 |
+| `CREATE POLICY ... USING ((select auth.uid()) = user_id)` | Supabase 专有函数；RLS 在 PG 12+ 默认可用 | 默认 PG 12+ 改用 `current_user` 等标准表达式；仅显式 PG 9.4 / GP 6.6 目标不适用 |
+| `SET search_path = ''` | 需要全限定对象；与显式三件套并列 | 二选一：空 `search_path` + 全限定，或 `pg_catalog, <trusted>, pg_temp` |
+| `CREATE INDEX ... INCLUDE` | `[11+]` | PG 12+ 默认可用；仅显式 PG 9.4 / GP 6.6 目标改用多列索引 |
+| BRIN 索引 | `[9.5+]` | PG 12+ 默认可用；仅显式 GP 6.6 / PG 9.4 目标不可用 |
+| `ON CONFLICT` | `[9.5+]` | PG 12+ 默认可用；仅显式 GP 6.6 / PG 9.4 目标不可用 |
+| `SKIP LOCKED` | `[9.5+]` | PG 12+ 默认可用；仅显式 GP 6.6 / PG 9.4 目标不可用 |
+| `total_exec_time`/`mean_exec_time` | `[13+]` | PG 12 用 `total_time`/`mean_time`；13+ 用 `total_exec_time`/`mean_exec_time` |
+| `pg_stat_progress_vacuum` | `[9.6+]` | PG 12+ 默认可用；仅显式 PG 9.4 / GP 6.6 目标不可用 |
 | “快 100–1000 倍”等数字 | 来源主张 | 不写进结论；只作为待验证假设 |
 | RLS 策略里 `SECURITY DEFINER` 辅助函数 | 需要 `search_path` + `REVOKE EXECUTE` | 与 `REV-S03`/`REV-S05` 一致；不要省略 |
 
 ### 8.2 SRC-2（awesome-copilot）
 
-| 来源写法/假设 | 偏差 | 本技能处理 |
+| 来源写法/假设 | 偏差或版本前提 | 本技能处理 |
 |---|---|---|
-| `CREATE TRIGGER ... EXECUTE FUNCTION` | `[11+]` | 9.4 用 `EXECUTE PROCEDURE`（`REV-D02`） |
-| `BIGSERIAL` | 可用，但不是唯一方案 | 既有契约优先；不要为“现代”改 identity（`[10+]`） |
+| `CREATE TRIGGER ... EXECUTE FUNCTION` | `[11+]` | PG 12+ 默认可用；仅显式 PG 9.4 / GP 6.6 目标用 `EXECUTE PROCEDURE`（`REV-D02`） |
+| `BIGSERIAL` | 可用，但不是唯一方案 | 既有契约优先；PG 12+ 也可用 `GENERATED AS IDENTITY`（`[10+]`） |
 | `CITEXT` | 需要扩展；GP 可用性 `[GP-待验证]` | 不在通用模板默认启用；先确认扩展 |
-| `ENUM` / `DOMAIN` | 9.4 可用，但变更成本高 | 可作为建模建议，不作为函数审查的阻断项 |
-| `data @> '{"status": "shipped"}'` + GIN | jsonb/GIN 在 9.4 可用；GP `[GP-待验证]` | 先确认 GP 支持，再评估 |
+| `ENUM` / `DOMAIN` | PG 12+ 可用，但变更成本高 | 可作为建模建议，不作为函数审查的阻断项 |
+| `data @> '{"status": "shipped"}'` + GIN | jsonb/GIN 在 PG 12+ 可用；GP `[GP-待验证]` | 原生 PG 12+ 直接评估；仅 GP 目标需先确认支持 |
 | `CREATE INDEX ... USING gin((data->'status'))` | 表达式 GIN 的可用性依赖操作符类 | 优先 `@>` 包含查询；表达式索引需 `plan-required` |
-| `WHEN (OLD.* IS DISTINCT FROM NEW.*)` | 9.4 可用；逐行求值有成本 | 可作为触发器优化建议，需 `workload-required` |
-| `PARALLEL SAFE` | `[9.6+]` | 9.4 不写 |
-| RLS 示例 | `[9.5+]` | 9.4 标“不适用” |
+| `WHEN (OLD.* IS DISTINCT FROM NEW.*)` | PG 12+ 可用；逐行求值有成本 | 可作为触发器优化建议，需 `workload-required` |
+| `PARALLEL SAFE` | `[9.6+]` | PG 12+ 默认可用（仍需证明无写库/会话状态）；仅显式 PG 9.4 / GP 6.6 目标不写 |
+| RLS 示例 | `[9.5+]` | PG 12+ 默认可评估；仅显式 PG 9.4 / GP 6.6 目标标“不适用” |
 
 ### 8.3 SRC-3（claude-dev-suite）
 
-| 来源写法/假设 | 偏差 | 本技能处理 |
+| 来源写法/假设 | 偏差或版本前提 | 本技能处理 |
 |---|---|---|
 | `AS $$ ... $$` | 与 `F-26` 冲突 | 统一 `$function$`；迁移需单独批准 |
-| `SET search_path = public, pg_temp` | `public` 不可信、未显式列 `pg_catalog`、顺序不完整 | 用 `pg_catalog, <trusted>, pg_temp`；`public` 仅在受控时纳入 |
-| `CREATE PROCEDURE ... COMMIT` | `[11+]` | 9.4 用函数；事务交给调用方 |
-| `PARALLEL SAFE` | `[9.6+]` | 9.4 不写 |
-| `ASSERT` | `[9.5+]` | 9.4 不写；用显式 `IF ... RAISE` |
-| `ON CONFLICT` 示例 | `[9.5+]` | 9.4 不写 |
-| `GENERATED AS IDENTITY` 相关 | `[10+]` | 9.4 用 `serial`/序列 |
+| `SET search_path = public, pg_temp` | `public` 在 PG 15 前对 `PUBLIC` 开放、未显式列 `pg_catalog`、顺序不完整 | 用 `pg_catalog, <trusted>, pg_temp`；`public` 仅在受控时纳入 |
+| `CREATE PROCEDURE ... COMMIT` | `[11+]` | PG 12+ 默认可用（受 `PLS-44` 上下文约束）；仅显式 PG 9.4 / GP 6.6 目标改用函数 |
+| `PARALLEL SAFE` | `[9.6+]` | PG 12+ 按真实并发安全性标注；仅显式 PG 9.4 / GP 6.6 目标不写 |
+| `ASSERT` | `[9.5+]` | PG 12+ 可用于开发断言（注意关闭与异常行为）；生产校验仍建议显式 `IF ... RAISE` |
+| `ON CONFLICT` 示例 | `[9.5+]` | PG 12+ 默认可用；仅显式 GP 6.6 / PG 9.4 目标不写 |
+| `GENERATED AS IDENTITY` 相关 | `[10+]` | PG 12+ 默认可用（既有契约用 `serial` 时不擅改）；仅显式 GP 6.6 / PG 9.4 目标用 `serial` |
 | `EXECUTE` 字符串与 `quote_ident(...)` 直接拼接 | 标识符可用 `quote_ident`，值仍须绑定 | 值用 `USING`；标识符优先 `%I` |
 | `SELECT INTO` 不写 `STRICT` | 可能吞掉 0 行/多行 | 需要“恰好一行”时用 `STRICT`（`REV-C05`/`PLS-05`） |
 | `RETURNS SETOF users` + `SELECT *` | 列依赖与宽扫描 | 显式列或说明契约（`REV-P04`） |
@@ -303,22 +304,22 @@
 | 来源写法/主张 | 偏差或风险 | 本技能处理 |
 |---|---|---|
 | 全部标识符 `snake_case`；函数 `fn_*`、过程 `pr_*`、触发器 `tg_*` | 与本技能可能使用的 `f_*`/`p_*`/`v_*` 命名不同；命名属于风格，不是安全规则 | 只作参考建议；以项目书面约定为准，不因外部来源改名 |
-| 每列都用 `CREATE DOMAIN`，默认 `NOT NULL` | 9.4 支持 DOMAIN，但既有项目可能未使用；改类型体系是结构迁移 | 不在函数审查中强制；仅当用户要求类型治理时评估 |
-| 一律用 `timestamptz`，不用 `timestamp` | 9.4 支持；但改既有列类型会改变契约与索引 | 只作为新表建议；既有函数改类型需批准（`REV-C12`） |
+| 每列都用 `CREATE DOMAIN`，默认 `NOT NULL` | PG 12+ 支持 DOMAIN，但既有项目可能未使用；改类型体系是结构迁移 | 不在函数审查中强制；仅当用户要求类型治理时评估 |
+| 一律用 `timestamptz`，不用 `timestamp` | PG 12+ 支持；但改既有列类型会改变契约与索引 | 只作为新表建议；既有函数改类型需批准（`REV-C12`） |
 | `clock_timestamp()` 取真实时钟，`now()`/`transaction_timestamp()` 取事务开始时间 | 两者语义不同；混用会让同一次调用内的“现在”不一致 | 新增 `REV-C13`：要求写明时间语义，不强制换函数 |
-| `GENERATED ALWAYS AS (...) STORED` | `[12+]` | 9.4/GP 6.6 不可用；用触发器或普通列 |
-| `INSERT ... ON CONFLICT DO NOTHING` 播种参考表 | `[9.5+]` | 9.4 不可用；用 `DELETE`+`INSERT` 或捕获冲突 |
-| `MERGE` | `[15+]` | 9.4 不可用；不要写进模板 |
-| `FOR UPDATE SKIP LOCKED` 队列表 | `[9.5+]` | 9.4 不可用；用 `NOWAIT` + 重试（`REV-D03`） |
-| `FOR NO KEY UPDATE` | 9.3+，9.4 可用 | 可作为减少锁强度的建议；需 `workload-required` 验证 |
-| `pg_advisory_xact_lock` 替代会话锁 | 9.4 可用；事务级自动释放，池化更安全 | 与 `ENG-10` 一致；会话级锁在事务池下会泄漏 |
-| `SET LOCAL app.user_id = ...` 传身份 | 9.4 可用；transaction 池化下会话 `SET` 会丢 | 审计时必须确认池化模式与身份来源 |
-| `CREATE PROCEDURE`、过程内 `COMMIT` | `[11+]` | 9.4 不可用；事务交给调用方 |
-| `CREATE TRIGGER ... EXECUTE FUNCTION` | `[11+]` | 9.4 用 `EXECUTE PROCEDURE`（`REV-D02`） |
+| `GENERATED ALWAYS AS (...) STORED` | `[12+]` | PG 12+ 默认可用；仅显式 PG 9.4 / PG 11 / GP 6.6 目标不可用 |
+| `INSERT ... ON CONFLICT DO NOTHING` 播种参考表 | `[9.5+]` | PG 12+ 默认可用；仅显式 GP 6.6 / PG 9.4 目标用 `DELETE`+`INSERT` |
+| `MERGE` | `[15+]` | PG 15+ 可用；PG 12 基线不可用，不写进跨 12+ 通用模板 |
+| `FOR UPDATE SKIP LOCKED` 队列表 | `[9.5+]` | PG 12+ 默认可用；仅显式 GP 6.6 / PG 9.4 目标用 `NOWAIT` + 重试 |
+| `FOR NO KEY UPDATE` | 9.3+，PG 12+ 可用 | 可作为减少锁强度的建议；需 `workload-required` 验证 |
+| `pg_advisory_xact_lock` 替代会话锁 | PG 12+ 可用；事务级自动释放，池化更安全 | 与 `ENG-10` 一致；会话级锁在事务池下会泄漏 |
+| `SET LOCAL app.user_id = ...` 传身份 | PG 12+ 可用；transaction 池化下会话 `SET` 会丢 | 审计时必须确认池化模式与身份来源 |
+| `CREATE PROCEDURE`、过程内 `COMMIT` | `[11+]` | PG 12+ 默认可用（受 `PLS-44` 约束）；仅显式 PG 9.4 / GP 6.6 目标不可用 |
+| `CREATE TRIGGER ... EXECUTE FUNCTION` | `[11+]` | PG 12+ 默认可用；仅显式 PG 9.4 / GP 6.6 目标用 `EXECUTE PROCEDURE` |
 | “没有显式 `SAVEPOINT` 就没有子事务” | 与 PL/pgSQL 行为不符：带 `EXCEPTION` 的块会建立子事务 | 以 `PLS-35`/`ENG-09` 为准；本文件不采纳该表述 |
-| RLS + `CREATE POLICY` + `FORCE ROW LEVEL SECURITY` | `[9.5+]`；GP `[GP-待验证]` | 9.4/GP 6.6 标“不适用”；不要照抄 `fn_current_app_user_id()` |
-| `citext`、`pg_trgm`、`pgcrypto`、`pg_cron`、`pgvector` | 扩展可用性依赖版本与安装；`pg_cron`/`pgvector` 不是 9.4 自带 | 先确认扩展清单；GP `[GP-待验证]` |
-| UUID v7、生成列、`MERGE` | 现代特性 | 9.4 不可用；UUID 用 `uuid` 类型 + `gen_random_uuid()`（`pgcrypto`） |
+| RLS + `CREATE POLICY` + `FORCE ROW LEVEL SECURITY` | `[9.5+]`；GP `[GP-待验证]` | PG 12+ 默认按需评估，不要照抄 `fn_current_app_user_id()`；仅显式 GP 6.6 / PG 9.4 目标标“不适用” |
+| `citext`、`pg_trgm`、`pgcrypto`、`pg_cron`、`pgvector` | 扩展可用性依赖版本与安装；`pg_cron`/`pgvector` 非内核自带 | 先确认扩展清单；GP `[GP-待验证]` |
+| UUID v7、生成列、`MERGE` | 部分需 PG 15+ 或 18+ / 扩展 | PG 12+ 支持 `gen_random_uuid()`（PG 13+ 内置；12 需 `pgcrypto`）；`MERGE` 需 `[15+]`；UUID v7 不做通用假设 |
 | “测试用事务回滚” | 方法本身可借鉴 | 本文件不声称已运行测试；只作为验证建议 |
 | 用 `pg_stat_user_indexes`/`EXPLAIN` 证明索引必要性 | 方向正确 | 与 `PERF-01`/`PERF-07` 一致；仍需快照与证据档 |
 
@@ -337,14 +338,13 @@
 
 ## 10. 审查完成检查清单
 
-- [ ] 已确认目标引擎与版本（PG 9.4 / GP 6.6 / 其他），并标注 `[待验证]` 项。
+- [ ] 已确认目标引擎与版本（默认原生 PG 12+，或显式指定的 PG 9.4 / GP 6.6 / 其他），并标注 `[待验证]` 项。
 - [ ] 已做只读排版核对，`STYLE-FMT` 单独成组，未改写被审对象。
 - [ ] 安全问题逐条落到 `REV-S01`～`REV-S08`，`BLOCKER` 有可指认的语句/ACL/`proconfig` 证据。
 - [ ] 正确性问题区分“吞异常”与“重抛丢上下文”，没有把 `AP-02` 误判为 `REV-C01`。
 - [ ] `DELETE`/`TRUNCATE` 问题按业务范围判断，没有简化为“缺事务”。
 - [ ] 性能问题全部带 `PERF-xx` 与五档证据标签（见 `README.md` 第 7 节）标签；没有“更快/更慢”的无证据结论。
-- [ ] 9.4/GP 6.6 门槛表逐项核对：`ON CONFLICT`、`EXECUTE FUNCTION`、RLS、BRIN、`INCLUDE`、
-      `SKIP LOCKED`、`CREATE PROCEDURE`、`ASSERT`、`PARALLEL`。
+- [ ] 若目标声明为 PG 13+ 或显式 GP 6.6 / PG 9.4，已按 `10` §1.1 核对门槛表（含 `MERGE`、`total_exec_time`、`EXPLAIN (WAL)` 或 GP 6.6 限制）。
 - [ ] 引用外部来源时写明“参考来源”，没有写成 `observed` 或个人习惯。
 - [ ] 结论区分：已确认缺陷 / 需 schema / 需计划 / 需负载 / 需人工批准。
 - [ ] 没有声称已运行工具或已验证性能。
@@ -353,8 +353,8 @@
 
 - `references/01-基线规范.md`：安全、正确性、事务、临时表、性能默认值。
 - `references/02-反模式.md`：`AP-01`～`AP-10`、`B-01`～`B-08`。
-- `references/06-SQL排版规范.md`：`F-01`～`F-31`。
-- `references/07-性能优化规则.md`：`PERF-xx`（当前 `PERF-01`～`PERF-51`）与五档证据标签（见 `README.md` 第 7 节）。
+- `references/06-SQL排版规范.md`：`F-01`～`F-41`。
+- `references/07-性能优化规则.md`：`PERF-xx`（当前 `PERF-01`～`PERF-54`）与五档证据标签（见 `README.md` 第 7 节）。
 - `references/09-工程与函数结构规范.md`：`ENG-xx`。
 - `references/10-PLpgSQL语法与函数形态.md`：`PLS-xx` 与版本门槛。
 - supabase/agent-skills：<https://github.com/supabase/agent-skills>
@@ -362,8 +362,8 @@
 - claude-dev-suite：<https://github.com/claude-dev-suite/claude-dev-suite>
 - damusix/skills，`postgres-writing-guidelines`：
   <https://github.com/damusix/skills/tree/main/postgres-writing-guidelines>
-- PostgreSQL 9.4 文档：<https://www.postgresql.org/docs/9.4/>
-- Greenplum 6.6 文档：<https://docs.greenplum.org/6-6/>
+- PostgreSQL 12+ 文档：<https://www.postgresql.org/docs/12/>
+- Greenplum 6.6 文档（按需兼容时参考）：<https://docs.greenplum.org/6-6/>
 
 本文件的规则是审查提示，不是自动化断言。定级前必须看被审对象、DDL、权限与版本；没有证据时
 写“待验证”，不要写“已确认”。

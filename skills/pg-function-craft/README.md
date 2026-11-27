@@ -2,7 +2,7 @@
 
 ![pg-function-craft Hero](assets/pg-function-craft-hero.svg)
 
-面向 PostgreSQL / Greenplum 函数、存储过程和触发器函数的生成、改写与审查 Skill。
+面向原生 PostgreSQL（默认 PG 12+，按需兼容 Greenplum 6.6 / PG 9.4）函数、存储过程和触发器函数的生成、改写与审查 Skill。
 它固定使用一套已脱敏的 SQL 编码风格，并在不连接数据库的前提下完成静态检查。
 
 ## 安装
@@ -50,7 +50,7 @@ python scripts/verify_offline.py --json
 建议同时提供：
 
 - 函数完整定义；
-- PostgreSQL / Greenplum 版本；
+- 目标 PostgreSQL 版本（未提供时默认原生 PG 12+；如目标是 Greenplum 6.6 / PG 9.4 请显式声明）；
 - 目标表 DDL、索引、分区和分布键；
 - 参数、返回值和错误契约；
 - 数据量、日期范围和并发场景；
@@ -67,7 +67,6 @@ python scripts/verify_offline.py --json
 - 前置逗号、4 空格缩进、关键字大写、显式列清单；
 - 集合式 SQL 优先；循环必须有明确理由、行数上界和批量策略；
 - 单条语句使用 CTE 或子查询；临时表只有在跨语句复用、昂贵计算复用、隔离/分批等情况下才物化；
-- `ext_1`–`ext_10` 等预留扩展列不进入计算脚本的 `INSERT`/`SELECT`，不生成 `NULL` 占位；
 - 日期过滤保持列侧裸露：`col >= p_start::date`，不写 `col::date >= ...`；
 - 默认 `SECURITY INVOKER`；动态值使用 `USING`，标识符使用 `%I` 或白名单；
 - 保持原函数的签名、返回值、异常文本、事务边界和外部行为，除非用户明确批准变更。
@@ -110,7 +109,7 @@ static-risk | inferred | plan-required | workload-required | not verified
 - 无指标文档依据的备用源是否从增量推导、临时表、驱动键和注释中整链删除；合同是否按交易单元与有效期关联；宽表目标列与 `SELECT` 列是否逐列注释对应；
 - DELETE 范围是否与重建范围一致；
 - 动态 SQL 是否可参数化；
-- PostgreSQL 9.4 / Greenplum 6.6 是否支持所用语法。
+- 目标版本（默认原生 PostgreSQL 12+；PG 13+ 与可选 Greenplum 6.6 / PG 9.4 见版本门槛）是否支持所用语法。
 
 性能规则见 `references/07-性能优化规则.md`，审查分级见 `references/08-PostgreSQL审查规则.md`。
 
@@ -160,7 +159,7 @@ tests/test_output_contract_modes.py 输出契约回归测试
 
 本目录不携带个人样例、风格档案、数据库连接信息或导出元数据。
 
-当前技能版本：`0.5.1`。变更记录见 `CHANGELOG.md`。
+当前技能版本：`0.7.0`。默认目标引擎基线为原生 PostgreSQL 12+（`pg12+`），支持通过 `SKILL.md`「调用上下文（Profile）」由上游 SOP 显式声明目标引擎（`target_engine`，含可选 `gp6.6` / `pg9.4`）、返回契约（`return_contract`）、逗号约定与项目覆盖项；变更记录见 `CHANGELOG.md`。
 
 `00`、`01` 与 `05` 的条目没有编号，按“文件名 + 小节名”引用（如“`00-风格与边界.md` 的
 冲突优先级”）；`04` 的条目使用 `STYLE-01`…`STYLE-10`。

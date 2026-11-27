@@ -8,8 +8,8 @@
 
 | Skill | 版本 | 适用任务 | 依赖 |
 |---|---:|---|---|
-| `pg-function-craft` | 0.5.1 | 生成、改写、审查 PostgreSQL / Greenplum 函数、存储过程和触发器函数 | Python 3.10+，只做离线静态检查 |
-| `shenergy-dwd-development` | 0.1.1 | 按省份、业态开展申能 DWD 口径、探源、DDL、计算、验收和交接 | 同时安装 `pg-function-craft`；按任务需要访问建表工匠、源库和目标库 |
+| `pg-function-craft` | 0.7.0 | 生成、改写、审查原生 PostgreSQL 12+ 函数、存储过程和触发器函数（按需兼容 GP） | Python 3.10+，只做离线静态检查；支持上游 Profile 上下文 |
+| `shenergy-dwd-development` | 0.4.0 | 按省份、业态开展申能 DWD 口径、探源、DDL、计算、验收和交接；首次开发（bootstrap）与源表同步后开发（full）分模式执行 | 同时安装 `pg-function-craft`；内置 4 个离线脚本（含 Spec 交接、无重叠双检与首次产物检查）；按任务需要访问建表工匠、源库和目标库 |
 
 如果只处理 SQL 函数，安装 `pg-function-craft` 即可。要做申能 DWD 开发，两个技能都要安装；`shenergy-dwd-development` 负责业务流程和证据，`pg-function-craft` 负责函数工程与静态检查。
 
@@ -30,11 +30,11 @@
    npx skills add gyb-cpu/yabo-data-skills --skill pg-function-craft
    npx skills add gyb-cpu/yabo-data-skills --skill shenergy-dwd-development
 3. 确认两个安装目录名与 SKILL.md 的 name 一致，并记录 version。
-4. 在 pg-function-craft 目录运行 python scripts/verify_offline.py --json。
-5. 汇报安装路径、版本和自检 ok/issues；失败时附实际命令和错误，不要伪造成功。
+4. 在 pg-function-craft 和 shenergy-dwd-development 目录分别运行 python scripts/verify_offline.py --json。
+5. 汇报安装路径、版本和两个自检的 ok/issues；失败时附实际命令和错误，不要伪造成功。
 ```
 
-安装成功的标准只有三条：两个技能默认安装到当前项目且目录名正确；`pg-function-craft` 自检返回 `ok: true` 且 `issues` 为空；最终报告包含可复核的路径、版本和命令结果。
+安装成功的标准只有三条：两个技能默认安装到当前项目且目录名正确；两个技能的离线自检都返回 `ok: true` 且 `issues` 为空；最终报告包含可复核的路径、版本和命令结果。
 
 安装提示词不处理业务准备。业务快照、目标表、字段映射、`.env.shenergy` 和授权范围由安装成功后的任务提示词处理。
 
@@ -96,7 +96,7 @@ npx skills add --help
 - `skills/pg-function-craft/`
 - `skills/shenergy-dwd-development/`
 
-目标目录名必须与 `SKILL.md` frontmatter 中的 `name` 完全一致，否则技能发现和后续更新可能错位。`pg-function-craft` 必须保留 `SKILL.md`、`README.md`、`CHANGELOG.md`、`references/`、`scripts/`、`tests/` 和 `assets/`。申能技能必须保留 `SKILL.md`、`CHANGELOG.md`、`references/` 和 `.env.example`；实际 `.env.shenergy` 只放在业务项目本地，不随技能分发。
+目标目录名必须与 `SKILL.md` frontmatter 中的 `name` 完全一致，否则技能发现和后续更新可能错位。`pg-function-craft` 必须保留 `SKILL.md`、`README.md`、`CHANGELOG.md`、`references/`、`scripts/`、`tests/` 和 `assets/`。申能技能必须保留 `SKILL.md`、`CHANGELOG.md`、`references/`、`scripts/` 和 `.env.example`；实际 `.env.shenergy` 只放在业务项目本地，不随技能分发。
 
 ### 安装后验证
 
@@ -119,7 +119,13 @@ python scripts/verify_offline.py --json
 
 该脚本只使用 Python 标准库，不连接数据库、不访问网络、不执行 SQL。它检查文件完整性、技能名称、文档引用、编码、换行和禁止夹带内容，不代表 SQL 已在数据库中编译通过。
 
-申能技能没有独立的自检脚本。至少确认 Agent 能加载 `shenergy-dwd-development/SKILL.md`，并能读取 `references/` 下的四份说明。需要访问平台或数据库时，再检查 `.env.shenergy` 和对应授权。
+在 `shenergy-dwd-development` 技能根目录同样执行离线自检：
+
+```bash
+python scripts/verify_offline.py --json
+```
+
+它校验必备文件、`SKILL.md`/`CHANGELOG.md` 版本对齐、`.env.example` 无真实凭据、UTF-8/LF 编码、脚本无数据库/网络导入以及文档链接有效。同时确认 Agent 能加载 `shenergy-dwd-development/SKILL.md` 并按需使用 `scripts/` 下的离线脚本（`parse_bi_snapshot.py`、`check_shenergy_artifacts.py`、`generate_validation_sql.py`）；需要访问平台或数据库时，再检查 `.env.shenergy` 和对应授权。
 
 ### 更新已安装技能
 
@@ -144,10 +150,13 @@ npx skills add gyb-cpu/yabo-data-skills --skill pg-function-craft
 npx skills add gyb-cpu/yabo-data-skills --skill shenergy-dwd-development
 ```
 
-更新后重新检查两个 `SKILL.md` 的 `version`，并运行：
+更新后重新检查两个 `SKILL.md` 的 `version`，并在两个技能目录分别运行：
 
 ```bash
 cd <pg-function-craft 技能目录>
+python scripts/verify_offline.py --json
+
+cd <shenergy-dwd-development 技能目录>
 python scripts/verify_offline.py --json
 ```
 
@@ -159,7 +168,7 @@ python scripts/verify_offline.py --json
 
 ```text
 检查 yabo-data-skills 是否需要更新。
-先读取两个已安装 SKILL.md 的 version 和实际路径。若当前 CLI 支持 update，先给出命令并等待我确认，不要静默更新；若不支持，给出按原安装作用域重新安装的命令并等待确认。成功后重新读取版本并运行 pg-function-craft 的 verify_offline.py --json。失败时继续使用本地版本，但必须标注“未确认最新”。
+先读取两个已安装 SKILL.md 的 version 和实际路径。若当前 CLI 支持 update，先给出命令并等待我确认，不要静默更新；若不支持，给出按原安装作用域重新安装的命令并等待确认。成功后重新读取版本并在两个技能目录分别运行 verify_offline.py --json。失败时继续使用本地版本，但必须标注“未确认最新”。
 ```
 
 ## 环境配置
@@ -217,7 +226,7 @@ printf '\n.env.shenergy\n' >> .gitignore
 | 使用模式 | 必须提供 | 缺失后的影响 |
 |---|---|---|
 | `generate` | 函数用途、输入输出、业务规则、目标 schema / 表、字段类型、调用方式 | 可以生成带假设的候选 SQL，但无法保证可部署 |
-| `generate` / `rewrite` | PostgreSQL 或 Greenplum 版本 | 无法确认语法、函数形态和版本兼容性 |
+| `generate` / `rewrite` | PostgreSQL（默认 PG 12+）或 Greenplum 版本 | 未说明时默认按 PG 12+ 输出；若目标为 GP 6.6 / PG 9.4 等兼容内核需显式告知 |
 | `generate` / `rewrite` | 目标表 DDL、主键、约束、索引 | 可能生成错误的列、类型、幂等或性能方案 |
 | `rewrite` / `review` | 完整现有函数定义和调用上下文 | 无法可靠做等价改写或定位行号问题 |
 | `review` | 数据量级、日期范围、执行频率、并发或上游调度信息 | 只能给静态风险，不能给实测性能结论 |
@@ -229,7 +238,8 @@ printf '\n.env.shenergy\n' >> .gitignore
 
 | 场景或阶段 | 用户需要提供 | 说明 |
 |---|---|---|
-| 首次开发 | 省份、业态、参考业务逻辑文件、当前项目根目录的 `.env.shenergy` | 在业务项目根目录运行；日期、输出目录和目标范围可由参考文件、当前日期和项目约定推导。目标表、映射、DDL、计算脚本和验收报告是产出 |
+| 首次开发（bootstrap） | 省份、业态、当天 BI 看快照（只读 `BI看` sheet）、参考业务逻辑文件、当前项目根目录的 `.env.shenergy`、建表工匠字段补录授权 | 目标库尚无源表时使用。产出平台补录后的 DDL 与引用全部源表的函数初稿，供建表和平台解析血缘、同步源表；不做对账、写库、血缘登记和评审 |
+| 源表同步后开发（full） | 首次开发的输入与产物，源表已同步到目标库 | 完成准确性、对账、事务试跑、数据插入、血缘登记和评审；写库、部署、回算按动作单独授权 |
 | 存量维护 | 首次开发的输入，加上现有目标表、DDL、函数、字段映射和变更范围 | 目标表已存在时，业务列名以现库既有列为准，不按平台条目或快照原文改名 |
 | 口径 | 当天 BI 看快照 `.xlsx`，保留文件名、日期、sheet 和表头 | 输入项；没有当天快照时，正式口径和事实取证阻塞，历史资料只能用于明确标注的演练 |
 | 探源 | `.env.shenergy` 和实际只读访问能力 | 源表登记、同步方式和覆盖信息可由技能探查后产出；不要要求用户预先完成整份源表登记 |
@@ -267,20 +277,41 @@ printf '\n.env.shenergy\n' >> .gitignore
 
 提示词只提供任务事实、资料路径和授权；SOP、阶段门禁、产物结构和报告格式由技能文件执行，不在提示词里重复。
 
-首次开发在业务项目根目录运行，用户只需提供省份、业态、参考业务逻辑文件和 `.env.shenergy`。任务日期、输出目录和目标范围由 Agent 从参考文件、当前日期和项目约定推导；目标表清单、字段映射、DDL、计算脚本和验收记录由技能产出，不能作为用户必须提前提供的材料。
+首次开发在业务项目根目录运行，分两步：
+
+1. **bootstrap**：目标库还没有源表。技能只做 BI看口径、源端探查、建表工匠字段补录、DDL 与函数初稿，交付固定产物后停止。函数口径可以不完全正确，但源表引用必须完整，平台据此自动解析血缘并同步源表。
+2. **full**：用户在目标库建表、在平台完成源表同步后，再做准确性、对账、数据插入、血缘登记和评审，保证目标表数据准确。
+
+`bootstrap` 的固定产物见 `skills/shenergy-dwd-development/references/首次开发.md` §4，结束时由 `check_shenergy_artifacts.py --kind bootstrap` 检查。项目目录不是空目录也可以运行，技能只在 `<省份><业态>/` 下写文件。
 
 发送接入提示词并确认准备清单后，再使用下面的对应模板。
 
-#### 首次开发
+#### 首次开发（bootstrap）
 
 ```text
-请使用新安装的 shenergy-dwd-development 技能，在当前业务项目根目录执行首次 DWD 开发。
+请使用 shenergy-dwd-development 技能，以 bootstrap 模式在当前业务项目根目录执行首次 DWD 开发。
 
 省份和业态：<省份> / <业态>（如：安徽 / 售电）
+当天 BI 看快照：<绝对路径>（只读 BI看 sheet）
 参考业务逻辑文件：<绝对路径>
 配置：当前项目根目录的 .env.shenergy
 
-本次只做只读探查，不写数据库、不部署、不回算。目标表、字段映射、DDL、计算脚本和验收记录由技能产出。按 SKILL.md 和 references 执行完整 SOP；信息不足写入 open_questions，不猜测。
+授权：源 MySQL 与目标 PostgreSQL 只读；建表工匠字段查重、补录并生成平台 DDL；本地产物写入。不写数据库、不部署、不回算。
+按 references/首次开发.md 执行，只交付其固定产物；信息不足写入待人工确认清单，不猜测。
+```
+
+#### 源表同步后开发（full）
+
+```text
+请使用 shenergy-dwd-development 技能，以 full 模式继续 <省份> <业态> 的 DWD 开发；涉及函数时调用 pg-function-craft。
+
+首次产物目录：<绝对路径>/<省份业态>
+当天 BI 看快照：<绝对路径>（只读 BI看 sheet）
+配置：当前项目根目录的 .env.shenergy
+状态：目标表已按首次 DDL 建好，源表已由平台同步到目标库。
+
+授权：源端、目标端只读探查；本地产物写入。事务内试跑、数据插入、血缘表写入按 <实际授权> 执行，未列出的写操作先停下确认。
+按 SKILL.md 阶段 1–9 完成准确性、对账、写入、血缘和评审。
 ```
 
 #### 存量维护或改写
@@ -382,6 +413,11 @@ yabo-data-skills/
       CHANGELOG.md
       .env.example                   不含凭据的连接配置模板
       references/                    流程、产物、函数与连接说明
+      scripts/
+        verify_offline.py            离线完整性与零凭据检查
+        parse_bi_snapshot.py         BI看快照离线解析（物理忽略 I/J/K）
+        check_shenergy_artifacts.py  Spec / DDL / 函数（含 --with-pg-checker 无重叠双检）/ CSV / 报告 / bootstrap 产物集合校验
+        generate_validation_sql.py   编译 / 三层对账 / 抽样 / 缺失 / 血缘 SQL 模板生成（支持 --spec）
     pg-function-craft/
       SKILL.md                       技能主规则与触发入口
       README.md                      技能自身说明
@@ -421,13 +457,19 @@ yabo-data-skills/
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-再到 `pg-function-craft` 技能根目录运行：
+再分别到 `pg-function-craft` 与 `shenergy-dwd-development` 技能根目录运行：
 
 ```bash
 python scripts/verify_offline.py --json
 ```
 
-两层都通过再提交。测试文件中的 `_red` 是历史命名，当前全部为绿色用例。
+以及 `pg-function-craft` 自带契约测试：
+
+```bash
+python -m unittest discover -s skills/pg-function-craft/tests -p "test_*.py" -v
+```
+
+全部通过再提交。测试文件中的 `_red` 是历史命名，当前全部为绿色用例。
 
 ## 边界说明
 
